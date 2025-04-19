@@ -260,3 +260,42 @@ assert (
 
 # also create a df without null barcodes in the products data since that can be useful
 products_df_nonulls = products_df_[pd.isna(products_df_["BARCODE"]) == False]
+
+# create a flag to indicate this exists. Will be used in join below
+products_df_nonulls["products_df_nonulls"] = 1
+
+# %%
+# Join data based on provided ERD
+# Start with transactions and then join out to the users, and then join out to the products
+
+combined_prep = transactions_df.merge(
+    users_df, how="left", left_on="USER_ID", right_on="ID"
+)
+combined = combined_prep.merge(products_df_nonulls, how="left", on="BARCODE")
+
+# %%
+# determine if we do not have all the data (which is the assumption based on the small quantity of data)
+combined
+
+# count the number of missing user ids
+len(
+    combined[pd.isna(combined["ID"]) == True]
+)  # 49738 missing user data #262 have user data
+len(combined[pd.isna(combined["ID"]) == True]) / len(
+    combined
+)  # 99.5% missing user data
+
+# count the number of missing products
+combined[
+    pd.isna(combined["products_df_nonulls"]) == True
+]  # 25170 missing product information #24830 have product information
+len(combined[pd.isna(combined["products_df_nonulls"]) == True]) / len(
+    combined
+)  # 50.3% missing product information
+
+# Look at all the data where we have all sets of information.
+combined[
+    (pd.isna(combined["ID"]) == False)
+    & (pd.isna(combined["products_df_nonulls"]) == False)
+]
+# 144 rows.
