@@ -204,3 +204,19 @@ fig.add_trace(go.Box(y=df2_, name="Two Years Ago - Signup Age"))
 fig.add_trace(go.Box(y=df1_, name="Past Year - Signup Age"))
 fig.update_layout(title="Age at Account Creation by relative year")
 fig.show()
+
+# %%
+# Also use the 1-way ANOVA test
+# This is not ideal since it does have a normal distribution assumption
+# and with the current findings, I will not go down the route to resample and ensure normality at this stage.
+# if stakeholders are interested in more findings around this, I will pursure this route.
+# However, I will throw the current data into this test so see if the populations have stat sig different means.
+
+f_statistic, p_value = stats.f_oneway(df1_, df2_)
+print("F-statistic:", f_statistic)
+print("P-value:", p_value)
+# also stat sig
+# reject null that they have the same mean
+# so we are still saying stat sig mean getting older (40 this year vs 38 last year)
+# this is in line with the ks-test.
+# %%
