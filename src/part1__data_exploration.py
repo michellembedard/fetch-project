@@ -81,7 +81,7 @@ for d in [products_df, transactions_df, users_df]:
 # Deeper exploration on the 0 items since this does not make sense.
 # I would imagine that at least 1 item must exist per reciept.
 
-# Hypothesis: quantity is a feature that was added at a later point in time
+# Hypothesis: Quantity is a feature that was added at a later point in time
 # from my personal usage, this looks like a feature that was added but never backfilled
 # July 2024 is when I started getting quantities
 
@@ -95,3 +95,42 @@ transactions_df[["SCAN_DATE", "PURCHASE_DATE", "FINAL_QUANTITY"]].sort_values(
 # the hypothesis does not appear to hold true.
 # however, data is only from June-Sept 2024,
 # so I am going to have to assume this was due to an app version and the 0 quantity will fade out over time
+
+# %%
+##FINAL_SALE
+# Deeper exploration since this seems to be a key feature that is missing from a lot of the data
+
+# Hypothesis: There is one missing final sale per reciept. This may be a placeholder for metadata.
+
+transactions_df[pd.isna(transactions_df["FINAL_SALE"]) == True]
+
+# save the info where final sale data is missing
+missing_final_sale_df = transactions_df[pd.isna(transactions_df["FINAL_SALE"]) == True]
+
+# quick plot for frequency over scan date
+fig = go.Figure(data=[go.Histogram(x=missing_final_sale_df["SCAN_DATE"])])
+fig.show()
+# occurs over the full date range
+
+# quick plot for frequency by final quantity
+fig = go.Figure(data=[go.Histogram(x=missing_final_sale_df["FINAL_QUANTITY"])])
+fig.show()
+# most are 1s. but this mirrors the full dataset.
+
+# now look to see if there is 1/reciept
+missing_final_sale_df["RECEIPT_ID"].value_counts()
+# there are occassionally more than 1 missing final sale amount per reciept.
+# Therefore, this does not appear to be a total line item amount
+
+# double check the quantity of missing final sale
+transactions_df_ = transactions_df.copy()
+transactions_df_["missing_final_sale"] = (
+    pd.isna(transactions_df["FINAL_SALE"]) == True
+).astype(int)
+transactions_df_["missing_final_sale"].agg(["count", "sum"])
+# 25% 12500/5000 are missing final sale amounts
+# This is pretty frequent so data quality is a concern here.
+
+# the hypothesis does not appear to hold true.
+# we will have to deal with the missing data.
+# I will assume that this is randomly missing and we can impute the data
