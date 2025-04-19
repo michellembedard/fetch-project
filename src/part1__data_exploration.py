@@ -69,5 +69,29 @@ for d in [products_df, transactions_df, users_df]:
         fig.update_layout(title=str(c))
         fig.show()
 
+# Quick callouts:
+# final quantity and final scale are right skewed
+# brand and manufacturer are frequently missing data
+# purchase and scan date are uniformly distributed over our time range
+# user data was created since 2018, so I will assume this is a random sample and representative of the population
+# state is frequently missing, but when it is filled out, it is roughly in state population order, so it seems our users are representative of the US population
 
 # %%
+##FINAL_QUANTITY
+# Deeper exploration on the 0 items since this does not make sense.
+# I would imagine that at least 1 item must exist per reciept.
+
+# Hypothesis: quantity is a feature that was added at a later point in time
+# from my personal usage, this looks like a feature that was added but never backfilled
+# July 2024 is when I started getting quantities
+
+# See if we have a lot of 0 quantity and then it phases out to have a quantity
+transactions_df[["SCAN_DATE", "PURCHASE_DATE", "FINAL_QUANTITY"]].sort_values(
+    ["SCAN_DATE"]
+)
+transactions_df[["SCAN_DATE", "PURCHASE_DATE", "FINAL_QUANTITY"]].sort_values(
+    ["PURCHASE_DATE"]
+)
+# the hypothesis does not appear to hold true.
+# however, data is only from June-Sept 2024,
+# so I am going to have to assume this was due to an app version and the 0 quantity will fade out over time
