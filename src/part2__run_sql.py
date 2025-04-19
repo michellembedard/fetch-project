@@ -67,3 +67,19 @@ d2 = open("../sql/open_ended_2.sql", "r")
 sql2 = d2.read()
 d2.close()
 duckdb.sql(sql2).show()
+
+# %%
+# Open-ended question 3:
+# 3. At what percent has Fetch grown year over year?
+
+# Assumptions: user growth is the measure of Fetch growth
+
+# Assumptions: the user data provided is a representative sample, even if it is not the full dataset
+# the data was pulled in the past so is not current through today, but rather current though the last user created date
+
+# Assumptions: the standard YOY growth formula is used by Fetch:  (Users This Period-Users Last Period)/Users Last Period
+
+d3 = open("../sql/open_ended_3.sql", "r")
+sql3 = d3.read()
+d3.close()
+duckdb.sql(sql3).show()
