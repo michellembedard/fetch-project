@@ -5,6 +5,7 @@ import plotly.graph_objects as go
 import numpy as np
 import plotly.express as px
 from dateutil.relativedelta import relativedelta
+from scipy import stats
 
 # %%
 # set up date fields
@@ -165,3 +166,33 @@ fig.show()
 
 # These are not normally distributed, even though they do have a bit of a bell curve.
 # %%
+# Use ks-test since it does not assume normal distribution and our data is not normally distributed
+# to identify if the distribution of the ages is stat sig different
+# H0=Two distributions are identical
+
+# remove nulls from age, as we saw above most people had age
+# so we can remove these samples with decent confidence that it will not affect our overall findings
+df1_ = df1[pd.isna(df1["Age_at_Creation"]) == False]["Age_at_Creation"]
+df2_ = df2[pd.isna(df2["Age_at_Creation"]) == False]["Age_at_Creation"]
+
+# Calculate the stats
+ks_statistic, p_value = stats.ks_2samp(df1_, df2_)
+print("K-S statistic:", ks_statistic)
+print("P-value:", p_value)
+
+# stat sig. So we reject that the distributions are the same
+# meaning our population of users is different this year compared to last year
+
+# Now compare the stats to see what the difference in ages is
+print("This past year")
+print(df1_.mean())
+print(df1_.quantile([0.25, 0.5, 0.75]))
+
+print("Two years ago")
+print(df2_.mean())
+print(df2_.quantile([0.25, 0.5, 0.75]))
+
+# visually see the differences in this past year vs the year prior
+# 25th percentile: past year 26.9, prior yr 24.1
+# 50th percentile: past year 40, prior yr 37
+# 25th percentile: past year 52.6, prior yr 49.7
