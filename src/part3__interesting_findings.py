@@ -123,3 +123,10 @@ users_df["CREATED_DATE_Year"] = (
 for d in ["CREATED_DATE", "CREATED_DATE_Month", "CREATED_DATE_Year"]:
     fig = px.box(users_df, x=d, y="Age_at_Creation")
     fig.show()
+
+##2. Notes:
+# Population age looks fairly consistent over time
+# There was a decrese around 2020, but it has looked flat for the last couple of years
+# Next steps - determine if there is a stat sig difference in the age distributions for this year compared to last year
+# Similar to the SQL section, I am assuming that the data is a sample
+# so I will use the latest created_date as the most recent information and work backwards from there
