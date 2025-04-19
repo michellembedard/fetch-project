@@ -46,24 +46,24 @@ d1b.close()
 duckdb.sql(sql1b).show()
 
 # %%
-#Open-ended question 2:
-#2. Which is the leading brand in the Dips & Salsa category?
+# Open-ended question 2:
+# 2. Which is the leading brand in the Dips & Salsa category?
 
-#Assumptions: leading brand is the brand with the highest final sales
-#as there are limited transactions, we can look at all the data, rather than go through an analysis of trending historical data
+# Assumptions: leading brand is the brand with the highest final sales
+# as there are limited transactions, we can look at all the data, rather than go through an analysis of trending historical data
 
-#Assumptions: there are no other salsa or dip categories that are not also included in the CATEGORY_2='Dips & Salsa'
+# Assumptions: there are no other salsa or dip categories that are not also included in the CATEGORY_2='Dips & Salsa'
 # This was verified through data exploration for the sample of data I was provided.
 
-#Assumptions: if Final Quantity = 'zero', we assume the quantity = 1 
+# Assumptions: if Final Quantity = 'zero', we assume the quantity = 1
 # because we assume this data was due to a new feature rollout where data was not backfilled
 
-#Assumptions: Final Sales is the total amount for the line item (does not need to be multiplied by a quantity)
+# Assumptions: Final Sales is the total amount for the line item (does not need to be multiplied by a quantity)
 
-#Assumptions: Final Sales can be imputed with the median of the salsa & dips product type
+# Assumptions: Final Sales can be imputed with the median of the salsa & dips product type
 
 
-d2 = open('../sql/open_ended_2.sql', 'r')
-sql2= d2.read()
+d2 = open("../sql/open_ended_2.sql", "r")
+sql2 = d2.read()
 d2.close()
 duckdb.sql(sql2).show()
