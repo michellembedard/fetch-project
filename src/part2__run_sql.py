@@ -83,3 +83,20 @@ d3 = open("../sql/open_ended_3.sql", "r")
 sql3 = d3.read()
 d3.close()
 duckdb.sql(sql3).show()
+# 18.2% YOY growth
+
+# Ideally, I would want to measure YOY Growth for active users
+# However, since there is only June-Sept 2024 transactions I cannot go this route
+# as it would be unfairly penalizing old users where we do not have thier transaction data
+# I would like to use a measure of activity that indicates longer-term usage.
+# For instance, I would want to mark a user a part of our population if they have a transaction at least 90 days after signup
+# Again, with the limited data, that is not possible.
+# However, to illustrate a way I would go about it (with the current data), I would do somthing like the following
+# (With the current data availabiltiy, I would assume a higher YOY growth this way than the first query, as newer users likely have transactions this year compared to older users)
+
+d3b = open("../sql/open_ended_3b.sql", "r")
+sql3b = d3b.read()
+d3b.close()
+duckdb.sql(sql3b).show()
+# as expected, very low user quantity considered due to limited transaction data (but also a slightly higher growth rate)
+# %%
