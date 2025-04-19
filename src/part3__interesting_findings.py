@@ -21,3 +21,63 @@ users_df
     # this could be interesting for marketing
 #2. Look into Age to see who our current audience is and if that has shifted over time 
     # this will be interesting for the business to ensure we are growing in a healthy manner
+
+#%%
+#create plotting function to plot each value of a column on a time series together
+
+def timeseries_plotting(dataframe:pd.DataFrame=users_df, groupcol:str='GENDER', grain:str = 'Daily' ):
+    """Function to plot the quantity of each category across time.
+
+    Args:
+        users_df_ (pd.DataFrame, optional): DataFrame which has column to plot. Defaults to users_df.
+        groupcol (str, optional): Column to plot. Defaults to 'GENDER'.
+        grain (str, optional): Frequency of time series plots. Defaults to 'Daily'. Can also accept "Weekly" or "Monthly"
+
+    Returns:
+        plotly.go figure: returns the plotly figure which can be displayed with .show()
+    """
+    
+    #Determine the categories we will need for plotting
+    groups=list(users_df[[groupcol]].value_counts().keys())
+    fig = go.Figure()
+    #For each category, plot the data in a time series
+    for g in groups:
+        g_=g[0]
+        df=dataframe.copy()
+        #copy the dataframe and get the daily level count (rather than at a timestamp granularity)
+        df['CREATED_DATE_']=pd.to_datetime(df['CREATED_DATE'].dt.date)
+        df_=df[df[groupcol]==g_][['CREATED_DATE_',groupcol]].groupby('CREATED_DATE_').agg('count')
+        #if necessary, resample to necessarily granularity level
+        if grain=='Weekly':
+            df_resampled = df_.resample('W').sum()
+        elif grain=='Monthly':
+            df_resampled = df_.resample('ME').sum()
+        else:
+            df_resampled = df_.resample('D').sum()
+        #plot the resampled data
+        fig.add_trace(go.Scatter(
+            name=g_,
+            mode="lines", 
+            x=df_resampled.index, y=df_resampled[groupcol],
+        ))
+    fig.update_xaxes(showgrid=True, ticklabelmode="period")
+    fig.update_layout(title=str(grain)+' new users by '+str(groupcol))
+    #return the graph object which can later be shown
+    return fig
+
+#%%
+#use the function to plot the gender of users over time, on the different granularities
+f=timeseries_plotting()
+f.show()
+
+f=timeseries_plotting(grain='Weekly')
+f.show()
+
+f=timeseries_plotting(grain='Monthly')
+f.show()
+
+##1. Notes:
+#Genders stay at roughly the same proportion over time.
+#There are a couple of days where there was a spike in male users.
+#It could be interesting to see if marketing helped cause these spikes or if there is some other activity we can capitalize on.
+#This is interesting, but will now pursue age for additional findings.
