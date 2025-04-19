@@ -280,4 +280,49 @@ from user_details
         - Use a finding from part 2 or come up with a new insight
     - Request for action: explain what additional help, info, etc. you need to make sense of the data and resolve any outstanding issues
 
-ANSWER:
+<details>
+<summary>ANSWER:</Summary>
+
+Hi team,
+
+I am currently working on building an understanding of our user and transaction growth.</br>
+Though my analysis, I have a some interesting initial findings as well as a few data quality callouts and outstanding questions.</br>
+
+</br>
+With my sample of data, I see we have <b>18% YOY growth</b>. </br>
+The <b>age of the users at signup time has increased in the last year</b>, compared to prior year.</br>
+<br>
+My assumption is that our target market should be a consistent or younger age over time so that we can incorporate younger shoppers into our user base. This would set us up for success if we have fully captured the mid-age market in the future.</br>
+Should we consider creating a campaign to target younger audiences?</br>
+If we would like our target market to be about 40 years old, then we are hitting our desired user-base.</br>
+Please let me know if you would like additional findings related to user growth.</br>
+
+</br>
+</br>
+
+- Data quality callouts: 
+    - There are multiple barcodes in the products data. Without a modified date, I am uncertain what is the most updated product information for a barcode.
+    - There is both missing price and missing quantity data for numerous transaction records
+    - There appears to be missing data:
+        - There are transactions which tie to users who do not exist in our user data
+        - There are transactions without barcodes
+        - There are transactions which tie to barcodes that do not exist in our product data
+- Outstanding questions:
+    - Can you direct me to the teams who can provide access to the full dataset?
+        - Based on my findings, I believe I am missing users and missing products in my current dataset. 
+        - I also assume I am missing transactions due to the low quantity of data. This does not allow for a full picture of user engagement and would be important to understand who is a power user and how best to target users.
+    - Are there standard assumptions which should be made to fill in the gaps?
+        - Specifically, where there is no "final sales" information, and no "final quantity" information ("zero"), do we have standard assumptions? These appear to be highly important data points and I do not want to make assumptions that differ from the rest of the team.
+        - I believe this data is missing either due to (1) bad receipt scans, or (2) product enhancements where data was not captured until a specific point in time, but cannot yet validate these assumptions.
+
+</br>  
+</br>     
+<b>Request for Action:</b></br>
+
+1. Can you send me either developer documenation or people who I can connect with to further understand the missing "final sales" and "final quantity" data?</br>
+2. Can you please connect me with the teams who can provide me with more data access?</br>
+
+</br>
+Thank you so much!</br>
+Michelle Bedard
+</details>
