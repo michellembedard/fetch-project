@@ -134,3 +134,129 @@ transactions_df_["missing_final_sale"].agg(["count", "sum"])
 # the hypothesis does not appear to hold true.
 # we will have to deal with the missing data.
 # I will assume that this is randomly missing and we can impute the data
+
+# %%
+# At this point, combine the data based on the ERD since basic exploration of the data on its own is complete
+# There should be a 1-to-many relationship between users and transactions
+# There should be a 1-to-many relationship between products and transactions
+
+# %%
+# verify that there is only 1 row per user (aka users are distinct) in the users_df
+assert len(users_df) == users_df["ID"].nunique()
+
+# no duplicative user ids
+
+# %%
+# verify barcodes are distinct in the products_df
+
+# assert len(products_df)==products_df['BARCODE'].nunique()
+# assertion error. Additional exploration required
+
+# A. Exploration
+# see discripancy quantity
+len(products_df)  # 845552
+products_df["BARCODE"].nunique()  # 841342
+
+products_df["BARCODE"].nunique() / len(products_df)  # 0.9950210040305032
+# almost no duplciates.
+
+# determine if they are true duplciates or if there is different information in the products_df
+products_df[products_df.duplicated()]  # 215 true duplicates
+845552 - 841342  # 4210 duplicates
+# we cannot just drop duplicates and move on. We have to create de-dup logic.
+
+# There are multiple products without a barcode.
+# This is a data quality issue we will need to address and understand.
+# the blank barcodes are interesting, but I assume they are manually-entered and have yet to be incorporated to the auotmatic system which is why they do not have a barcode.
+products_df[pd.isna(products_df["BARCODE"]) == True]  # 4025
+
+# Non-blank but also duplicate barcodes
+products_df[
+    (products_df.duplicated("BARCODE")) & (pd.isna(products_df["BARCODE"]) == False)
+]
+# 185 rows to resolve.
+# save these in a list for further use
+dup_barcodes = (
+    products_df["BARCODE"]
+    .value_counts()[products_df["BARCODE"].value_counts() > 1]
+    .keys()
+    .to_list()
+)
+
+
+# B. Resolve dups
+# to resolve dups, as there is no updated as of column, we cannot use a modified timestamp to pull in the most recent info
+# therefore, we will pull int the information based on how much data is filled out
+
+# 0. save non-dups
+# 1. drop dups
+# 2. calc how many fields are filled out
+# 3. rn based on # of fields
+# otherwise, choose highest index
+# since we are assuming that the most recent records are at the bottom if we did not gain more product information
+
+# B.0
+# non-dups
+products_df_ = products_df[~(products_df["BARCODE"].isin(dup_barcodes))]
+
+# B.1
+dup_products = products_df[products_df["BARCODE"].isin(dup_barcodes)]
+dup_products.drop_duplicates(inplace=True)  # 212 rows
+
+# B.2 calculate how much data is filled
+
+# For the categories, see if they are null or filled
+for i in range(1, 5):
+    dup_products["cat" + str(i) + "_notnull"] = (
+        ~pd.isna(dup_products["CATEGORY_" + str(i)])
+    ).astype(int)
+
+# For the manufacturer/brand, see if they are null or filled
+dup_products["manufacturer_notnull"] = (~pd.isna(dup_products["MANUFACTURER"])).astype(
+    int
+)
+dup_products["brand_notnull"] = (~pd.isna(dup_products["BRAND"])).astype(int)
+
+# count the number of non-nulls
+dup_products["total_notnull"] = (
+    dup_products["cat1_notnull"]
+    + dup_products["cat2_notnull"]
+    + dup_products["cat3_notnull"]
+    + dup_products["cat4_notnull"]
+    + dup_products["manufacturer_notnull"]
+    + dup_products["brand_notnull"]
+)
+
+# also save the index into a column for easier user in B3
+dup_products["index_num"] = dup_products.index
+
+# B3. Create a flag for if we should keep the row, based on how much info is filled out/latest index
+dup_products["keep_flag"] = (
+    dup_products.sort_values(
+        ["BARCODE", "total_notnull", "index_num"], ascending=[True, False, False]
+    )
+    .groupby(["BARCODE"])
+    .cumcount()
+    + 1
+)
+
+# Only keep the rows where flag=1
+de_dup_products = dup_products[dup_products["keep_flag"] == 1]
+# 185. good. expected amount
+
+# Save the columns we want to add into our de-duped products
+cols = list(products_df_.columns)
+
+# Add data into de-duped products
+products_df_ = pd.concat([products_df_, de_dup_products[cols]])
+
+# C.
+# verify de-duping barcodes was successful
+# counts should match when excluding null barcodes.
+assert (
+    len(products_df_[pd.isna(products_df_["BARCODE"]) == False])
+    == products_df_[pd.isna(products_df_["BARCODE"]) == False]["BARCODE"].nunique()
+)
+
+# also create a df without null barcodes in the products data since that can be useful
+products_df_nonulls = products_df_[pd.isna(products_df_["BARCODE"]) == False]
