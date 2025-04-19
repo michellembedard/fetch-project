@@ -2,6 +2,7 @@
 # import packages
 import pandas as pd
 import plotly.graph_objects as go
+import numpy as np
 import plotly.express as px
 
 
@@ -81,3 +82,15 @@ f.show()
 #There are a couple of days where there was a spike in male users.
 #It could be interesting to see if marketing helped cause these spikes or if there is some other activity we can capitalize on.
 #This is interesting, but will now pursue age for additional findings.
+
+#%%
+# To prep for age discovery, add field for age at account creation
+#maybe plot box plots of age and quantity of age over time
+users_df['age_at_creation_days']=(users_df['CREATED_DATE']-users_df['BIRTH_DATE']).map(lambda x: np.nan if pd.isnull(x) else x.days)
+users_df['Age_at_Creation']=users_df['age_at_creation_days'].apply(lambda x: x/365.2425)
+
+#find pct of users without age
+users_df['Age_at_Creation'].count()/len(users_df['Age_at_Creation'])
+#96.3% have an age so we can assume this is representative of the full population
+
+# %%
