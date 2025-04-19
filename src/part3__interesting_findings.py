@@ -196,3 +196,11 @@ print(df2_.quantile([0.25, 0.5, 0.75]))
 # 25th percentile: past year 26.9, prior yr 24.1
 # 50th percentile: past year 40, prior yr 37
 # 25th percentile: past year 52.6, prior yr 49.7
+
+# %%
+# Visualize results
+fig = go.Figure()
+fig.add_trace(go.Box(y=df2_, name="Two Years Ago - Signup Age"))
+fig.add_trace(go.Box(y=df1_, name="Past Year - Signup Age"))
+fig.update_layout(title="Age at Account Creation by relative year")
+fig.show()
