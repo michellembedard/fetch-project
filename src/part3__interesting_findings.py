@@ -109,3 +109,17 @@ users_df["Age_at_Creation"].count() / len(users_df["Age_at_Creation"])
 # 96.3% have an age so we can assume this is representative of the full population
 
 # %%
+# also add in columns for when the user account was created at the Month and Year so we have easier discovery below
+users_df["CREATED_DATE_Month"] = (
+    users_df["CREATED_DATE"].dt.to_period("M").dt.to_timestamp()
+)
+users_df["CREATED_DATE_Year"] = (
+    users_df["CREATED_DATE"].dt.to_period("Y").dt.to_timestamp()
+)
+
+# %%
+# plot the distribution of age at time account was created
+# loop through the different grains
+for d in ["CREATED_DATE", "CREATED_DATE_Month", "CREATED_DATE_Year"]:
+    fig = px.box(users_df, x=d, y="Age_at_Creation")
+    fig.show()
