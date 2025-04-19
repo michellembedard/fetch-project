@@ -8,7 +8,7 @@ with users_21_up as (
         , case when BIRTH_DATE::TIMESTAMP<=yearsago21 then 1 else 0 end as atleast21_flag
     from users_df
     where missing_birthdate=0
-     and atleast21_flag=1
+        and atleast21_flag=1
 )
 , de_duped_products as (
     --next, de-duplciate barcodes (based on part 1 exploration, this is something which must be fixed)
