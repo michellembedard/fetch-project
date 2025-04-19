@@ -36,7 +36,7 @@ duckdb.sql(sql1).show()
 
 
 ##However, if this is the full dataset, then I would advise running the following
-# 90219 over 21, and not missing birthdate, from full user population
+# As, 90219 are over 21, and not missing birthdate, from full user population
 # 90219/100000 #90% of users are over 21.
 # Therefore, we can assume that the brands of the full population will match the over 21 population
 
