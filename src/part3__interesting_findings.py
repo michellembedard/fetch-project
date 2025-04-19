@@ -220,3 +220,7 @@ print("P-value:", p_value)
 # so we are still saying stat sig mean getting older (40 this year vs 38 last year)
 # this is in line with the ks-test.
 # %%
+##2. Notes:
+# There is a statistically significant increase in user age when their account was created
+# when comparing users who entered the product within the last year vs uses who entered the product the year prior to that.
+# Depending on the target market and desired user growth strategy, this trend is something which may require attention.
