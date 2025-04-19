@@ -4,7 +4,7 @@ import pandas as pd
 import plotly.graph_objects as go
 import numpy as np
 import plotly.express as px
-
+from dateutil.relativedelta import relativedelta
 
 # %%
 # set up date fields
@@ -130,3 +130,38 @@ for d in ["CREATED_DATE", "CREATED_DATE_Month", "CREATED_DATE_Year"]:
 # Next steps - determine if there is a stat sig difference in the age distributions for this year compared to last year
 # Similar to the SQL section, I am assuming that the data is a sample
 # so I will use the latest created_date as the most recent information and work backwards from there
+# %%
+# Create relative date variables
+max_created_date = users_df["CREATED_DATE"].max()
+one_year_ago = users_df["CREATED_DATE"].max() + relativedelta(years=-1)
+two_years_ago = users_df["CREATED_DATE"].max() + relativedelta(years=-2)
+
+# add flag for created within the last year vs the year prior
+users_df["created_within_the_last_year"] = (
+    (users_df["CREATED_DATE"] > one_year_ago)
+    & (users_df["CREATED_DATE"] <= max_created_date)
+).astype(int)
+users_df["created_within_the_year_prior"] = (
+    (users_df["CREATED_DATE"] > two_years_ago)
+    & (users_df["CREATED_DATE"] <= one_year_ago)
+).astype(int)
+
+# %%
+# First, plot the distribution to see if it is normally distributed,
+# as this will affect which tests we can use without resampling
+
+# set up within the last year and within 2 years ago populations
+df1 = users_df[users_df["created_within_the_last_year"] == 1]
+df2 = users_df[users_df["created_within_the_year_prior"] == 1]
+
+# plot these populations together to see the distributions as well as how they compare
+fig = go.Figure()
+fig.add_trace(go.Histogram(x=df1["Age_at_Creation"], name="Past Year - Signup Age"))
+fig.add_trace(go.Histogram(x=df2["Age_at_Creation"], name="Two Years Ago - Signup Age"))
+fig.update_layout(barmode="overlay")
+fig.update_traces(opacity=0.75)
+fig.update_layout(title="Age at Account Creation by relative year")
+fig.show()
+
+# These are not normally distributed, even though they do have a bit of a bell curve.
+# %%
