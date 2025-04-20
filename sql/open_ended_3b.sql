@@ -46,13 +46,12 @@ with yoy_start as (
         , case when created_date::timestamp between fouryearsago and threeyearsago then 1 else 0 end as new_3_4_year_ago
         , case when created_date::timestamp between fiveyearsago and fouryearsago then 1 else 0 end as new_4_5_year_ago
         , case when created_date::timestamp < fiveyearsago then 1 else 0 end as existing_users_prior_to_5_years_ago
-        from active_users
+    from active_users
     join yoy_start
         on 1=1
 )
 , summary_stats as (
     --identify summary stats for the YOY growth
-    --see `yoy_growth_pct` for the final answer
     select sum(new_0_1_year_ago) as total_new_users_0_1_year_ago --unnecessary for calculation, just interesting
         , sum(new_1_2_year_ago) as total_new_1_2_year_ago
         , sum(new_2_3_year_ago) as total_new_2_3_year_ago

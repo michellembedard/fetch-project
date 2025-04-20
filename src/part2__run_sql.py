@@ -29,6 +29,15 @@ users_df = pd.read_csv("../data/USER_TAKEHOME.csv", parse_dates=users_parse_date
 # This allows for us to not account for the missing quantity data, which we cannot resolve without understanding business assumptions
 # And we believe it is more important for the item to be purchased multiple times in distinct trips to the store, rather than multiples within the same check-out.
 
+# Assumption 4: Products without barcodes have been manually entered 
+# and are not validated with the system. 
+# Therefore, they should not be considered in the analysis.
+
+# Assumption 5: Duplicate barcodes in the product data must be resolved.
+# There should only be one set of product details per barcode.
+# The assumption is the product details with the most data is the most accurate
+# and if there is a tie, then the product details with brand is most accurate.
+
 d1 = open("../sql/close_ended_1.sql", "r")
 sql1 = d1.read()
 d1.close()
@@ -51,7 +60,8 @@ Top 5 brands by unique receipts scanned by users 21+
 """
 
 
-## However, if I have been provided with the full dataset, then I would advise running the following
+## However, if I have been provided with the full dataset, 
+# then I would advise running the following to mitigate the risk of missing user data.
     # As, 90219 are over 21, and not missing birthdate, from full user population
     # 90219/100000 #90% of users are over 21.
 # Therefore, we can assume that the brands of the full population will match the over 21 population
@@ -89,10 +99,20 @@ Top 5 brands by unique receipts scanned (based on above caveat)
 
 # Assumption 4: Final Sales is the total amount for the line item (does not need to be multiplied by a quantity)
 
-# Assumption 5: Final Sales can be imputed with the median of the salsa & dips product type
+# Assumption 5: Final Sales can be imputed with the median of the salsa & dips product type from items in transactions.
+# This accounts for the median based on actual purchases, 
+# rather than the median from the product list without considering shopping patterns.
 # Since quantity is almost always 1 and imputing assumption is not fully trustworthy without more business context, 
 # then I will not multiply by quantity in order to limit risks of imputing.
 
+# Assumption 6: Products without barcodes have been manually entered 
+# and are not validated with the system. 
+# Therefore, they should not be considered in the analysis.
+
+# Assumption 7: Duplicate barcodes in the product data must be resolved.
+# There should only be one set of product details per barcode.
+# The assumption is the product details with the most data is the most accurate
+# and if there is a tie, then the product details with brand is most accurate.
 
 d2 = open("../sql/open_ended_2.sql", "r")
 sql2 = d2.read()
@@ -134,5 +154,5 @@ sql3b = d3b.read()
 d3b.close()
 duckdb.sql(sql3b).show()
 # as expected, **very low** user quantity considered due to limited transaction data (but also a slightly higher growth rate)
-# this data cannot be trusted until more historic transaction data is available.
+# this data CANNOT be trusted until more historic transaction data is available.
 # %%
