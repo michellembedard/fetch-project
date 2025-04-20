@@ -1,5 +1,5 @@
 # %%
-import duckdb
+import duckdb #this is used to run SQL in python since I am not connecting to an external database
 import pandas as pd
 
 # %%
@@ -18,14 +18,14 @@ users_df = pd.read_csv("../data/USER_TAKEHOME.csv", parse_dates=users_parse_date
 # Close-ended question 1:
 # 1. What are the top 5 brands by receipts scanned among users 21 and over?
 
-# Assumptions: I only have a sample of data.
+# Assumption 1: I only have a sample of data.
 # The code is set up to run properly if more data is present
 
-# Assumptions: We want the top 5 results.
+# Assumption 2: We want the top 5 results.
 # However, if there is a tie for 5th place, include all brands which are tied for the 5th place spot,
 # as there is is not an inherent order to brands
 
-# Assumptions: We care about unique receipts scanned, not specific times the brand was on the same receipt
+# Assumption 3: We care about unique receipts scanned, not specific times the brand was on the same receipt
 # This allows for us to not account for the missing quantity data, which we cannot resolve without understanding business assumptions
 # And we believe it is more important for the item to be purchased multiple times in distinct trips to the store, rather than multiples within the same check-out.
 
@@ -33,70 +33,106 @@ d1 = open("../sql/close_ended_1.sql", "r")
 sql1 = d1.read()
 d1.close()
 duckdb.sql(sql1).show()
+"""
+Top 5 brands by unique receipts scanned by users 21+
+┌─────────────────┬─────────────────┐
+│      BRAND      │ unique_receipts │
+│     varchar     │      int64      │
+├─────────────────┼─────────────────┤
+│ DOVE            │               3 │
+│ NERDS CANDY     │               3 │
+│ MEIJER          │               2 │
+│ SOUR PATCH KIDS │               2 │
+│ HERSHEY'S       │               2 │
+│ GREAT VALUE     │               2 │
+│ TRIDENT         │               2 │
+│ COCA-COLA       │               2 │
+└─────────────────┴─────────────────┘
+"""
 
 
-##However, if this is the full dataset, then I would advise running the following
-# As, 90219 are over 21, and not missing birthdate, from full user population
-# 90219/100000 #90% of users are over 21.
+## However, if I have been provided with the full dataset, then I would advise running the following
+    # As, 90219 are over 21, and not missing birthdate, from full user population
+    # 90219/100000 #90% of users are over 21.
 # Therefore, we can assume that the brands of the full population will match the over 21 population
 
 d1b = open("../sql/close_ended_1b.sql", "r")
 sql1b = d1b.read()
 d1b.close()
 duckdb.sql(sql1b).show()
+"""
+Top 5 brands by unique receipts scanned (based on above caveat)
+┌─────────────┬─────────────────┐
+│    BRAND    │ unique_receipts │
+│   varchar   │      int64      │
+├─────────────┼─────────────────┤
+│ COCA-COLA   │             527 │
+│ GREAT VALUE │             384 │
+│ PEPSI       │             361 │
+│ EQUATE      │             341 │
+│ LAY'S       │             324 │
+└─────────────┴─────────────────┘
+"""
 
 # %%
 # Open-ended question 2:
 # 2. Which is the leading brand in the Dips & Salsa category?
 
-# Assumptions: leading brand is the brand with the highest final sales
+# Assumption 1: leading brand is the brand with the highest final sales
 # as there are limited transactions, we can look at all the data, rather than go through an analysis of trending historical data
 
-# Assumptions: there are no other salsa or dip categories that are not also included in the CATEGORY_2='Dips & Salsa'
+# Assumption 2: there are no other salsa or dip categories that are not also included in the CATEGORY_2='Dips & Salsa'
 # This was verified through data exploration for the sample of data I was provided.
 
-# Assumptions: if Final Quantity = 'zero', we assume the quantity = 1
+# Assumption 3: if Final Quantity = 'zero', we assume the quantity = 1
 # because we assume this data was due to a new feature rollout where data was not backfilled
 
-# Assumptions: Final Sales is the total amount for the line item (does not need to be multiplied by a quantity)
+# Assumption 4: Final Sales is the total amount for the line item (does not need to be multiplied by a quantity)
 
-# Assumptions: Final Sales can be imputed with the median of the salsa & dips product type
+# Assumption 5: Final Sales can be imputed with the median of the salsa & dips product type
+# Since quantity is almost always 1 and imputing assumption is not fully trustworthy without more business context, 
+# then I will not multiply by quantity in order to limit risks of imputing.
 
 
 d2 = open("../sql/open_ended_2.sql", "r")
 sql2 = d2.read()
 d2.close()
 duckdb.sql(sql2).show()
+#TOSTITOS is the leading Dips & Salsa brand
 
 # %%
 # Open-ended question 3:
 # 3. At what percent has Fetch grown year over year?
 
-# Assumptions: user growth is the measure of Fetch growth
+# Assumption 1: user growth is the measure of Fetch growth
 
-# Assumptions: the user data provided is a representative sample, even if it is not the full dataset
+# Assumption 2: the user data provided is a representative sample, even if it is not the full dataset
 # the data was pulled in the past so is not current through today, but rather current though the last user created date
 
-# Assumptions: the standard YOY growth formula is used by Fetch:  (Users This Period-Users Last Period)/Users Last Period
+# Assumption 3: the standard YOY growth formula is used by Fetch:  (Users This Period-Users Last Period)/Users Last Period
+# this is calculating the full population growth rate, not the new user growth rate
+
+# Assumption 4: we would like to view YOY growth for the last 5 years
 
 d3 = open("../sql/open_ended_3.sql", "r")
 sql3 = d3.read()
 d3.close()
 duckdb.sql(sql3).show()
-# 18.2% YOY growth
+# 18.2% YOY growth over the last year
 
 # Ideally, I would want to measure YOY Growth for active users
 # However, since there is only June-Sept 2024 transactions I cannot go this route
-# as it would be unfairly penalizing old users where we do not have thier transaction data
+# as it would be unfairly penalizing old users where we do not have their transaction data
 # I would like to use a measure of activity that indicates longer-term usage.
 # For instance, I would want to mark a user a part of our population if they have a transaction at least 90 days after signup
 # Again, with the limited data, that is not possible.
-# However, to illustrate a way I would go about it (with the current data), I would do somthing like the following
-# (With the current data availabiltiy, I would assume a higher YOY growth this way than the first query, as newer users likely have transactions this year compared to older users)
+# However, to illustrate a way I would go about it (with the current data), I would do something like the following
+# (With the current data availability, I would assume a higher YOY growth this way than the first query, as newer users likely have transactions this year compared to older users)
 
 d3b = open("../sql/open_ended_3b.sql", "r")
 sql3b = d3b.read()
 d3b.close()
 duckdb.sql(sql3b).show()
-# as expected, very low user quantity considered due to limited transaction data (but also a slightly higher growth rate)
+# as expected, **very low** user quantity considered due to limited transaction data (but also a slightly higher growth rate)
+# this data cannot be trusted until more historic transaction data is available.
 # %%

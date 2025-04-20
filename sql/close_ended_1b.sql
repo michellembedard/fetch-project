@@ -1,7 +1,7 @@
 --OPTION 1B: REMOVE USER RESTRICTION
 with de_duped_products as (
-    --next, de-duplciate barcodes (based on part 1 exploration, this is something which must be fixed)
-    --the the rows with the most data
+    --next, de-duplicate barcodes (based on part 1 exploration, this is something which must be fixed)
+    --keep the rows with the most data
     --and if that is tied, use the row with brand info
     select *
         , case when CATEGORY_1 is not null then 1 else 0 end
@@ -23,8 +23,8 @@ with de_duped_products as (
     --This will allow us to resolve ties at 5th place
     select min(unique_receipts) as unique_receipts_at_5th_place
     from (
-        --per brand, identify the number of distinct recipts scanned
-        --only select the top 5-most reciepts
+        --per brand, identify the number of distinct receipts scanned
+        --only select the top 5-most receipts
         select p.brand
             , count(distinct t.RECEIPT_ID) as unique_receipts
         from transactions_df t
@@ -38,10 +38,10 @@ with de_duped_products as (
     )
 )
 --gather the final result
---identify the number of distinct reciept scans by brand for all transactions (as we assume that this will mirror the 21+ age group)
+--identify the number of distinct receipt scans by brand for all transactions (as we assume that this will mirror the 21+ age group)
 --and pull the top 5 (including anything tied for 5th place)
 select p.brand
-    --, count(t.RECEIPT_ID) as reciepts
+    --, count(t.RECEIPT_ID) as receipts
     , count(distinct t.RECEIPT_ID) as unique_receipts
 from transactions_df t
 left join de_duped_products p 
@@ -57,7 +57,7 @@ order by count(distinct t.RECEIPT_ID) desc
 --However, if this is not necessary, the following should be run as the final result
 /*
 select p.brand
-    --, count(t.RECEIPT_ID) as reciepts
+    --, count(t.RECEIPT_ID) as receipts
     , count(distinct t.RECEIPT_ID) as unique_receipts
 from transactions_df t
 left join de_duped_products p 
