@@ -422,7 +422,7 @@ from summary_stats
 Hello [product or business leader],
 
 I am currently working on building an understanding of our user and transaction growth.</br>
-Though my analysis, I have a some interesting initial findings I am excited to share. I also would like your help pointing me in the right direction to address my data quality callouts and outstanding questions.</br>
+Through my analysis, I have a some interesting initial findings I am excited to share. I also would like your help pointing me in the right direction to address my data quality callouts and outstanding questions.</br>
 
 </br>
 With my sample of data, I am observing <b>18% YOY user growth</b> in the last year. </br>
