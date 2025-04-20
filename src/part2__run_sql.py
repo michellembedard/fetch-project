@@ -62,8 +62,8 @@ Top 5 brands by unique receipts scanned by users 21+
 
 ## However, if I have been provided with the full dataset,
 # then I would advise running the following to mitigate the risk of missing user data.
-# As, 90219 are over 21, and not missing birthdate, from full user population
-# 90219/100000 #90% of users are over 21.
+    # As, 90219 are over 21, and not missing birthdate, from full user population
+    # 90219/100000 #90% of users are over 21.
 # Therefore, we can assume that the brands of the full population will match the over 21 population
 
 d1b = open("../sql/close_ended_1b.sql", "r")
