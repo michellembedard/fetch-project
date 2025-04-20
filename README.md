@@ -1,6 +1,14 @@
 # fetch-project
 
-## Part 1: explore the data
+Project instructions are below, separated into Part 1, Part 2, and Part 3
+
+<b> See answers to in the expandable ANSWER sections</b>
+
+Click the triangle to un-collapse sections.
+
+--------------------------------------------------
+
+<b>Part 1: explore the data</b>
 - Review the unstructured csv files and answer the following questions with code that supports your conclusions:
 1. Are there any data quality issues present?
 2. Are there any fields that are challenging to understand?
@@ -9,13 +17,13 @@
 <summary>ANSWER:</Summary>
 
 1. Are there any data quality issues present?
-    - Within transactions, there is missing final sale and final quantity data
+    - Within transactions, there is missing `FINAL_SALE` and `FINAL_QUANTITY` data.
         - These both appear to be business-critical data points, so it is concerning that these are missing. I would like to connect with other data team or software engineering members to gather historical context and learn if there are any assumptions we can make around the missing data.
-    - There are not always barcodes for transactions
-        - This is not concerning since I imagine that there are niche stores, etc that would be selling products without a traditional barcode.
+    - There are transactions without barcodes.
+        - This is not concerning since I imagine that there are niche stores that would be selling products without a traditional barcode.
             - However, if there is an automatic process to create a barcode in the data if one does not exist, then this is cause for concern and something I would want to reach out to developers to understand further.
-    - There are products without barcodes
-        - This is not concerning since I assume that they contain manually entered product information that has not been incorporated into an automatic system which generates the barcode.
+    - There are products without barcodes.
+        - This is not concerning since I assume that product information has been manually entered and not yet incorporated into an automatic system which generates the barcode.
     - There is missing data across the board.
         - My assumption is that only a sample of transactions, users, and products was provided and that there is more data available.
         
@@ -25,19 +33,26 @@
             - I am assuming this is the sale amount for the full line item in my analysis.
     - It is challenging to understand the transactions `FINAL_QUANTITY` field.
         - It is unclear what "zero" means.
-            - I am assuming that this is a field which was added later and never backfilled. Any receipts prior to the app update which added the quantity was imputed with a text field of "zero". 
+            - I am assuming that this is a field which was added later and never backfilled. Any receipts scanned prior to the app version which introduced quantity have been imputed with a text field of "zero". 
             - Since 1 is the most common quantity amount, I will assume that any "zero" values can reasonably be assumed to have a true quantity of 1.
+                - After the initial data exploration, I followed this assumption in the SQL files in Part 2.
 
-- More information can be found in `src/part1__data_exploration.py` and `src/part1__readme.md`
+- More information can be found in `src/part1__data_exploration.py`
 </details>
 
-## Part 2: provide SQL queries
+<br>
+<b> Part 2: provide SQL queries</b>
+
 - Answer three of the following questions with at least one question coming from the closed-ended and one from the open-ended question set. Each question should be answered using one query.
-### 2A Closed-ended questions:
+
+<i> 2A Closed-ended questions:</i>
+
 1. What are the top 5 brands by receipts scanned among users 21 and over?
 2. What are the top 5 brands by sales among users that have had their 3. account for at least six months?
 3. What is the percentage of sales in the Health & Wellness category by generation?
-### 2B Open-ended questions: for these, make assumptions and clearly state them when answering the question.
+
+<i> 2B Open-ended questions: for these, make assumptions and clearly state them when answering the question.</i>
+
 1. Who are Fetch’s power users?
 2. Which is the leading brand in the Dips & Salsa category?
 3. At what percent has Fetch grown year over year?
@@ -63,7 +78,7 @@ with users_21_up as (
     select *
         , today() as todaysdate
         , todaysdate::TIMESTAMP - interval 21 year as yearsago21
-        --, dateadd(year,-21,getdate()) as yearsago21 --redshift syntax
+        --, dateadd(year,-21,getdate()) as yearsago21 --AWS Redshift syntax
         , case when BIRTH_DATE::TIMESTAMP is null then 1 else 0 end as missing_birthdate
         , case when BIRTH_DATE::TIMESTAMP<=yearsago21 then 1 else 0 end as atleast21_flag
     from users_df
@@ -71,8 +86,8 @@ with users_21_up as (
         and atleast21_flag=1
 )
 , de_duped_products as (
-    --next, de-duplciate barcodes (based on part 1 exploration, this is something which must be fixed)
-    --the the rows with the most data
+    --next, de-duplicate barcodes (based on part 1 exploration, this is something which must be fixed)
+    --keep the rows with the most data
     --and if that is tied, use the row with brand info
     select *
         , case when CATEGORY_1 is not null then 1 else 0 end
@@ -94,8 +109,8 @@ with users_21_up as (
     --This will allow us to resolve ties at 5th place
     select min(unique_receipts) as unique_receipts_at_5th_place
     from (
-        --per brand, identify the number of distinct recipts scanned
-        --only select the top 5-most reciepts
+        --per brand, identify the number of distinct receipts scanned
+        --only select the top 5-most receipts
         select p.brand
             , count(distinct t.RECEIPT_ID) as unique_receipts
         from transactions_df t
@@ -111,10 +126,10 @@ with users_21_up as (
     )
 )
 --gather the final result
---identify the number of distinct reciept scans by brand for users 21+
+--identify the number of distinct receipt scans by brand for users 21+
 --and pull the top 5 (including anything tied for 5th place)
 select p.brand
-    --, count(t.RECEIPT_ID) as reciepts
+    --, count(t.RECEIPT_ID) as receipts
     , count(distinct t.RECEIPT_ID) as unique_receipts
 from transactions_df t
 join users_21_up u
@@ -132,7 +147,7 @@ order by count(distinct t.RECEIPT_ID) desc
 --However, if this is not necessary, the following should be run as the final result
 /*
 select p.brand
-    --, count(t.RECEIPT_ID) as reciepts
+    --, count(t.RECEIPT_ID) as receipts
     , count(distinct t.RECEIPT_ID) as unique_receipts
 from transactions_df t
 join users_21_up u
@@ -153,8 +168,8 @@ limit 5
 
 ```
 with de_duped_products as (
-    --de-duplciate barcodes (based on part 1 exploration, this is something which must be fixed)
-    --the the rows with the most data
+    --de-duplicate barcodes (based on part 1 exploration, this is something which must be fixed)
+    --keep the rows with the most data
     --and if that is tied, use the row with brand info
     select *
         , case when CATEGORY_1 is not null then 1 else 0 end
@@ -180,20 +195,18 @@ with de_duped_products as (
 )
 , transaction_details_by_brand as (
     --only for dip and salsa transactions, identify the brand
-    --basd on on assumptions, make final quanity "zero" map to 1
-    --based on assumptions, replace blanks with 0s for final sale
+    --based on assumptions, make final quantity "zero" map to 1
     select t.receipt_id
         , t.purchase_date
-        , replace(t.final_sale,' ','0')::decimal as final_sale
-        , replace(t.final_quantity,'zero','0')::decimal as final_quantity_
-        , replace(t.final_quantity,'zero','1')::decimal as final_quantity_imputed
+        , replace(t.final_sale,' ',NULL)::decimal as final_sale
+        , replace(t.final_quantity,'zero','1')::decimal as final_quantity_imputed --impute quantity with 1, not 0, based on stated assumption
         , t.final_sale as final_sale_raw
         , t.final_quantity as final_quantity_raw
         , ds.brand
     from transactions_df t
     join dips_and_salsa ds
         on t.barcode=ds.barcode
-        --we can join becase if we left join then we will not get any other useful information
+        --we can join because if we left join then we will not get any other useful information
         --we need the barcode to set up a proper connection, as nulls will give us no information about if a dip & salsa was purchased
 )
 , median_salsa_dip_sale as (
@@ -204,7 +217,7 @@ with de_duped_products as (
     where final_sale is not null
 )
 , imputed_details as (
-    --take transaction_details_by_brand and impute the median sales amount where no sales amount exists
+    --based on assumptions, replace blank final sale amount with median sales amount
     select *
         , (case when final_sale_raw=' ' 
             then (select med from median_salsa_dip_sale)::varchar 
@@ -215,7 +228,7 @@ with de_duped_products as (
 )
 --gather the final result
 --identify the top salsa and dip brand, based on total sales
---assuming median salsa and dip sales value when sales value is not prsent
+--assuming median salsa and dip sales value when sales value is not present
 select brand
     , sum(final_sale_imputed) as total_sales
     , sum(final_quantity_imputed) as total_quantity
@@ -227,7 +240,8 @@ limit 1
 --top result is not a null brand
 --if it was, we could add `where brand is not null`, 
 --or use these findings to inform the business that missing data is causing a major concern with findings
---I would favor seeing that a null is the most common response rather than filtering it out so that addtitional data discovery/work with software engineers could be performed
+--I would favor seeing that a null is the most common response rather than filtering it out 
+--so that additional data discovery/work with software engineers could be performed
 ```
 </details>
 
@@ -235,9 +249,10 @@ limit 1
 <summary>O3. At what percent has Fetch grown year over year?</Summary>
 
 ```
+--identify yoy growth for the last 5 years
 with yoy_start as (
     --assumption is that this is a random sample of user data
-    --do rolling year from the max date since we believe we have just a sample that ended in the past
+    --do rolling year from the max date since I believe we have only a sample of data which does not go through present-day
     select max(created_date) as current_date_of_data
     from users_df
 )
@@ -247,33 +262,77 @@ with yoy_start as (
     --assumption is that all users provided are still part of our user population 
     select created_date
         , current_date_of_data
-        --, dateadd(year,-1,current_date_of_data) as oneyearago --redshift syntax
-        --, dateadd(year,-2,current_date_of_data) as twoyearsago --redshift syntax
+        --, dateadd(year,-1,current_date_of_data) as oneyearago --AWS Redshift syntax example
         , current_date_of_data::TIMESTAMP - interval 1 year as oneyearago
         , current_date_of_data::TIMESTAMP - interval 2 year as twoyearsago
-        , case when created_date::timestamp between oneyearago and current_date_of_data then 1 else 0 end as new_this_year
-        , case when created_date::timestamp between twoyearsago and oneyearago then 1 else 0 end as new_last_year
-        , case when created_date::timestamp < twoyearsago then 1 else 0 end as existing_users_prior_to_2_years_ago
+        , current_date_of_data::TIMESTAMP - interval 3 year as threeyearsago
+        , current_date_of_data::TIMESTAMP - interval 4 year as fouryearsago
+        , current_date_of_data::TIMESTAMP - interval 5 year as fiveyearsago
+        , case when created_date::timestamp between oneyearago and current_date_of_data then 1 else 0 end as new_0_1_year_ago
+        , case when created_date::timestamp between twoyearsago and oneyearago then 1 else 0 end as new_1_2_year_ago
+        , case when created_date::timestamp between threeyearsago and twoyearsago then 1 else 0 end as new_2_3_year_ago
+        , case when created_date::timestamp between fouryearsago and threeyearsago then 1 else 0 end as new_3_4_year_ago
+        , case when created_date::timestamp between fiveyearsago and fouryearsago then 1 else 0 end as new_4_5_year_ago
+        , case when created_date::timestamp < fiveyearsago then 1 else 0 end as existing_users_prior_to_5_years_ago
         from users_df
     join yoy_start
         on 1=1
 )
---identify summary stats for the YOY growth
---see `yoy_growth_pct` for the final answer
-select sum(new_this_year) as total_new_users_this_year
-    , sum(new_last_year) as total_new_users_last_year
-    , sum(existing_users_prior_to_2_years_ago) as total_prior_users
-    , count(*) as total_users_this_year
-    , total_new_users_last_year+total_prior_users as total_users_this_last_year
-    , (total_users_this_year-total_users_this_last_year)/total_users_this_last_year as yoy_growth
-    , yoy_growth*100 as yoy_growth_pct
-from user_details
+, summary_stats as (
+    --identify summary stats for the YOY growth
+    --see `yoy_growth_pct` for the final answer
+    select sum(new_0_1_year_ago) as total_new_users_0_1_year_ago --unnecessary for calculation, just interesting
+        , sum(new_1_2_year_ago) as total_new_1_2_year_ago
+        , sum(new_2_3_year_ago) as total_new_2_3_year_ago
+        , sum(new_3_4_year_ago) as total_new_3_4_year_ago
+        , sum(new_4_5_year_ago) as total_new_4_5_year_ago
+        , sum(existing_users_prior_to_5_years_ago) as total_prior_users
+        , count(*) as total_users_this_year --all users based on our data
+        , total_prior_users
+            +total_new_4_5_year_ago
+            +total_new_3_4_year_ago
+            +total_new_2_3_year_ago
+            +total_new_1_2_year_ago 
+            as total_users_last_year
+        , total_prior_users
+            +total_new_4_5_year_ago
+            +total_new_3_4_year_ago
+            +total_new_2_3_year_ago
+            as total_users_two_years_ago
+        , total_prior_users
+            +total_new_4_5_year_ago
+            +total_new_3_4_year_ago
+            as total_users_three_years_ago
+        , total_prior_users
+            +total_new_4_5_year_ago
+            as total_users_four_years_ago
+        , total_prior_users
+            as total_users_five_years_ago
+        , (total_users_this_year-total_users_last_year)/total_users_last_year as yoy_growth_last_year_to_this_year
+        , (total_users_last_year-total_users_two_years_ago)/total_users_two_years_ago as yoy_growth_two_years_ago_to_last_year
+        , (total_users_two_years_ago-total_users_three_years_ago)/total_users_three_years_ago as yoy_growth_three_years_ago_to_two_years_ago
+        , (total_users_three_years_ago-total_users_four_years_ago)/total_users_four_years_ago as yoy_growth_four_years_ago_to_three_years_ago
+        , (total_users_four_years_ago-total_users_five_years_ago)/total_users_five_years_ago as yoy_growth_five_years_ago_to_four_years_ago
+    from user_details
+)
+--gather final result of yoy growth over the last 5 years
+--and present findings as a percent
+--max data currently is 9/11/2024
+select yoy_growth_last_year_to_this_year*100 as yoy_growth_pct_Sept_2023_2024
+    , yoy_growth_two_years_ago_to_last_year*100  as yoy_growth_pct_Sept_2022_2023
+    , yoy_growth_three_years_ago_to_two_years_ago*100 as yoy_growth_pct_Sept_2021_2022
+    , yoy_growth_four_years_ago_to_three_years_ago*100 as yoy_growth_pct_Sept_2020_2021
+    , yoy_growth_five_years_ago_to_four_years_ago*100 as yoy_growth_pct_Sept_2019_2020
+from summary_stats
+
 ```
 </details>
 
 </details>
+<br>
 
-## Part 3: communicate with stakeholders
+<b>Part 3: communicate with stakeholders</b>
+
 - Construct an email or slack message that is understandable to a product or business leader who is not familiar with your day-to-day work. Summarize the results of your investigation. Include:
     - Key data quality issues and outstanding questions about the data
     - One interesting trend in the data
@@ -283,46 +342,67 @@ from user_details
 <details>
 <summary>ANSWER:</Summary>
 
-Hi team,
+Hello [product or business leader],
 
 I am currently working on building an understanding of our user and transaction growth.</br>
-Though my analysis, I have a some interesting initial findings as well as a few data quality callouts and outstanding questions.</br>
+Though my analysis, I have a some interesting initial findings I am excited to share. I also would like your help pointing me in the right direction to address my data quality callouts and outstanding questions.</br>
 
 </br>
-With my sample of data, I see we have <b>18% YOY growth</b>. </br>
-The <b>age of the users at signup time has increased in the last year</b>, compared to prior year.</br>
-<br>
-My assumption is that our target market should be a consistent or younger age over time so that we can incorporate younger shoppers into our user base. This would set us up for success if we have fully captured the mid-age market in the future.</br>
-Should we consider creating a campaign to target younger audiences?</br>
-If we would like our target market to be about 40 years old, then we are hitting our desired user-base.</br>
+With my sample of data, I am observing <b>18% YOY user growth</b> in the last year. </br>
+<b>New user growth had declined in mid-2022 through mid-2023 and has been rebounding since.</b> It has yet to fully recover to early-2022 levels.</br>
+
+- My assumption is that our team is focusing on appealing to younger audiences in the next few years (early 20s vs 40s). 
+    - This allows us to capture new, young shoppers so that we always have new markets to tap into. This is especially important when we have fully captured the mid-age market in the future.
+- The <b>age of the users at signup time has slightly increased in the last year</b>, compared to prior year.
+- However, if we would like our target market to be about 40 years old, then we are hitting our desired user-base.
+- If we desire to capture a younger market, should we consider creating a campaign to target younger audiences?
+
 Please let me know if you would like additional findings related to user growth.</br>
 
 </br>
 </br>
+Through my analysis, I uncovered a handful of data quality callouts and have a few outstanding questions.
 
 - Data quality callouts: 
-    - There are multiple barcodes in the products data. Without a modified date, I am uncertain what is the most updated product information for a barcode.
-    - There is both missing price and missing quantity data for numerous transaction records
-    - There appears to be missing data:
+    - There are some products with multiple barcodes. Without a modified date, I am uncertain what is the most updated product information for a barcode.
+    - There is both missing price and missing quantity data for numerous transaction records.
+    - There are transactions without barcodes. I assume this occurs for niche products, but it is an important data point which is sometimes missing.
+    - I appear to be missing access to data:
         - There are transactions which tie to users who do not exist in our user data
-        - There are transactions without barcodes
         - There are transactions which tie to barcodes that do not exist in our product data
 - Outstanding questions:
     - Can you direct me to the teams who can provide access to the full dataset?
         - Based on my findings, I believe I am missing users and missing products in my current dataset. 
         - I also assume I am missing transactions due to the low quantity of data. This does not allow for a full picture of user engagement and would be important to understand who is a power user and how best to target users.
     - Are there standard assumptions which should be made to fill in the gaps?
-        - Specifically, where there is no "final sales" information, and no "final quantity" information ("zero"), do we have standard assumptions? These appear to be highly important data points and I do not want to make assumptions that differ from the rest of the team.
+        - Specifically, where there is no "final sales" information, and no "final quantity" information (ie "zero"), do we have standard assumptions? These appear to be highly important data points and I do not want to make assumptions that differ from the rest of the team.
         - I believe this data is missing either due to (1) bad receipt scans, or (2) product enhancements where data was not captured until a specific point in time, but cannot yet validate these assumptions.
 
 </br>  
 </br>     
 <b>Request for Action:</b></br>
 
-1. Can you send me either developer documenation or people who I can connect with to further understand the missing "final sales" and "final quantity" data?</br>
+1. Can you send me either developer documentation or people who I can connect with to further understand the missing "final sales" and "final quantity" data?</br>
 2. Can you please connect me with the teams who can provide me with more data access?</br>
 
 </br>
 Thank you so much!</br>
 Michelle Bedard
+</br>
+</br>
+</br>
+</br>
+
+<i>Appendix</i>
+
+- Plots to support user growth findings
+    - New Users over time
+        - ![alt text](src/monthly_new_users.png)
+    - Total Users over time
+        - ![alt text](src/cumulative_users_plot.png)
 </details>
+
+--------------------------------------------
+
+Notes:
+- Please see package versions in pyproject.toml file for reproducing results.

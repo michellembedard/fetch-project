@@ -3,7 +3,7 @@ with users_21_up as (
     select *
         , today() as todaysdate
         , todaysdate::TIMESTAMP - interval 21 year as yearsago21
-        --, dateadd(year,-21,getdate()) as yearsago21 --redshift syntax
+        --, dateadd(year,-21,getdate()) as yearsago21 --AWS Redshift syntax
         , case when BIRTH_DATE::TIMESTAMP is null then 1 else 0 end as missing_birthdate
         , case when BIRTH_DATE::TIMESTAMP<=yearsago21 then 1 else 0 end as atleast21_flag
     from users_df
@@ -11,8 +11,8 @@ with users_21_up as (
         and atleast21_flag=1
 )
 , de_duped_products as (
-    --next, de-duplciate barcodes (based on part 1 exploration, this is something which must be fixed)
-    --the the rows with the most data
+    --next, de-duplicate barcodes (based on part 1 exploration, this is something which must be fixed)
+    --keep the rows with the most data
     --and if that is tied, use the row with brand info
     select *
         , case when CATEGORY_1 is not null then 1 else 0 end
@@ -34,8 +34,8 @@ with users_21_up as (
     --This will allow us to resolve ties at 5th place
     select min(unique_receipts) as unique_receipts_at_5th_place
     from (
-        --per brand, identify the number of distinct recipts scanned
-        --only select the top 5-most reciepts
+        --per brand, identify the number of distinct receipts scanned
+        --only select the top 5-most receipts
         select p.brand
             , count(distinct t.RECEIPT_ID) as unique_receipts
         from transactions_df t
@@ -51,10 +51,10 @@ with users_21_up as (
     )
 )
 --gather the final result
---identify the number of distinct reciept scans by brand for users 21+
+--identify the number of distinct receipt scans by brand for users 21+
 --and pull the top 5 (including anything tied for 5th place)
 select p.brand
-    --, count(t.RECEIPT_ID) as reciepts
+    --, count(t.RECEIPT_ID) as receipts
     , count(distinct t.RECEIPT_ID) as unique_receipts
 from transactions_df t
 join users_21_up u
@@ -72,7 +72,7 @@ order by count(distinct t.RECEIPT_ID) desc
 --However, if this is not necessary, the following should be run as the final result
 /*
 select p.brand
-    --, count(t.RECEIPT_ID) as reciepts
+    --, count(t.RECEIPT_ID) as receipts
     , count(distinct t.RECEIPT_ID) as unique_receipts
 from transactions_df t
 join users_21_up u

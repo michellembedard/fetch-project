@@ -27,14 +27,13 @@ users_df
 # %%
 # create plotting function to plot each value of a column on a time series together
 
-
 def timeseries_plotting(
     dataframe: pd.DataFrame = users_df, groupcol: str = "GENDER", grain: str = "Daily"
 ):
     """Function to plot the quantity of each category across time.
 
     Args:
-        users_df_ (pd.DataFrame, optional): DataFrame which has column to plot. Defaults to users_df.
+        dataframe (pd.DataFrame, optional): DataFrame which has column to plot. Defaults to users_df.
         groupcol (str, optional): Column to plot. Defaults to 'GENDER'.
         grain (str, optional): Frequency of time series plots. Defaults to 'Daily'. Can also accept "Weekly" or "Monthly"
 
@@ -43,7 +42,7 @@ def timeseries_plotting(
     """
 
     # Determine the categories we will need for plotting
-    groups = list(users_df[[groupcol]].value_counts().keys())
+    groups = list(dataframe[[groupcol]].value_counts().keys())
     fig = go.Figure()
     # For each category, plot the data in a time series
     for g in groups:
@@ -56,7 +55,7 @@ def timeseries_plotting(
             .groupby("CREATED_DATE_")
             .agg("count")
         )
-        # if necessary, resample to necessarily granularity level
+        # if necessary, resample to proper granularity level
         if grain == "Weekly":
             df_resampled = df_.resample("W").sum()
         elif grain == "Monthly":
@@ -95,12 +94,58 @@ f.show()
 # It could be interesting to see if marketing helped cause these spikes or if there is some other activity we can capitalize on.
 # This is interesting, but will now pursue age for additional findings.
 
+# An additional takeaway is that it appears that, across all genders, there was a large decline in new users.
+# This requires further exploration
+
+#%%
+# New users over time
+# Add column to quickly group everything together
+users_df['1s']='1'
+
+f = timeseries_plotting(groupcol='1s')
+f.update_layout(title='Daily New Users over time')
+f.show()
+
+f = timeseries_plotting(groupcol='1s', grain="Weekly")
+f.update_layout(title='Weekly New Users over time')
+f.show()
+
+f = timeseries_plotting(groupcol='1s', grain="Monthly")
+f.update_layout(title='Monthly New Users over time')
+f.show()
+f.write_html('monthly_new_users_plt.html')
+
+# New users started to decline in mid-2022 through mid-2023.
+# Starting mid-2023, new user growth has rebounded, but it has not returned to early-2022 levels.
+
+
+#%%
+# Cumulative users over time
+
+# Gather all dates to account for possible missing dates
+# for ease, limit data to just the date and the count
+cumulative_users = pd.DataFrame(users_df[['CREATED_DATE','1s']])
+cumulative_users["CREATED_DATE_"] = pd.to_datetime(cumulative_users["CREATED_DATE"].dt.date)
+# Find counts per day
+cumulative_users_ = (cumulative_users.groupby("CREATED_DATE_").agg("count"))
+# resample so there are no missing days of data
+df_resampled = cumulative_users_.resample("D").sum()
+
+# Calculate cumulative users
+df_resampled['Cumulative Users'] = df_resampled['1s'].cumsum()
+
+# Create the plot
+fig = px.line(df_resampled, x=df_resampled.index, y='Cumulative Users', title='Cumulative Users Over Time')
+fig.show()
+fig.write_html('cumulative_users_plt.html')
+
 # %%
 # To prep for age discovery, add field for age at account creation
 # maybe plot box plots of age and quantity of age over time
 users_df["age_at_creation_days"] = (
     users_df["CREATED_DATE"] - users_df["BIRTH_DATE"]
 ).map(lambda x: np.nan if pd.isnull(x) else x.days)
+
 users_df["Age_at_Creation"] = users_df["age_at_creation_days"].apply(
     lambda x: x / 365.2425
 )
@@ -127,8 +172,8 @@ for d in ["CREATED_DATE", "CREATED_DATE_Month", "CREATED_DATE_Year"]:
 
 ##2. Notes:
 # Population age looks fairly consistent over time
-# There was a decrese around 2020, but it has looked flat for the last couple of years
-# Next steps - determine if there is a stat sig difference in the age distributions for this year compared to last year
+# There was a decrease around 2020, but it has looked flat for the last couple of calendar years
+# Next steps - determine if there is a statistically significant difference in the age distributions for this year compared to last year
 # Similar to the SQL section, I am assuming that the data is a sample
 # so I will use the latest created_date as the most recent information and work backwards from there
 # %%
@@ -142,7 +187,8 @@ users_df["created_within_the_last_year"] = (
     (users_df["CREATED_DATE"] > one_year_ago)
     & (users_df["CREATED_DATE"] <= max_created_date)
 ).astype(int)
-users_df["created_within_the_year_prior"] = (
+
+users_df["created_within_the_year_prior_to_last_yr"] = (
     (users_df["CREATED_DATE"] > two_years_ago)
     & (users_df["CREATED_DATE"] <= one_year_ago)
 ).astype(int)
@@ -153,18 +199,19 @@ users_df["created_within_the_year_prior"] = (
 
 # set up within the last year and within 2 years ago populations
 df1 = users_df[users_df["created_within_the_last_year"] == 1]
-df2 = users_df[users_df["created_within_the_year_prior"] == 1]
+df2 = users_df[users_df["created_within_the_year_prior_to_last_yr"] == 1]
 
 # plot these populations together to see the distributions as well as how they compare
 fig = go.Figure()
-fig.add_trace(go.Histogram(x=df1["Age_at_Creation"], name="Past Year - Signup Age"))
 fig.add_trace(go.Histogram(x=df2["Age_at_Creation"], name="Two Years Ago - Signup Age"))
+fig.add_trace(go.Histogram(x=df1["Age_at_Creation"], name="Past Year - Signup Age"))
 fig.update_layout(barmode="overlay")
 fig.update_traces(opacity=0.75)
 fig.update_layout(title="Age at Account Creation by relative year")
 fig.show()
 
 # These are not normally distributed, even though they do have a bit of a bell curve.
+
 # %%
 # Use ks-test since it does not assume normal distribution and our data is not normally distributed
 # to identify if the distribution of the ages is stat sig different
@@ -172,8 +219,8 @@ fig.show()
 
 # remove nulls from age, as we saw above most people had age
 # so we can remove these samples with decent confidence that it will not affect our overall findings
-df1_ = df1[pd.isna(df1["Age_at_Creation"]) == False]["Age_at_Creation"]
-df2_ = df2[pd.isna(df2["Age_at_Creation"]) == False]["Age_at_Creation"]
+df1_ = df1[pd.isna(df1["Age_at_Creation"]) == False]["Age_at_Creation"] #created_within_the_last_year
+df2_ = df2[pd.isna(df2["Age_at_Creation"]) == False]["Age_at_Creation"] #created_within_the_year_prior_to_last_yr
 
 # Calculate the stats
 ks_statistic, p_value = stats.ks_2samp(df1_, df2_)
@@ -182,6 +229,10 @@ print("P-value:", p_value)
 
 # stat sig. So we reject that the distributions are the same
 # meaning our population of users is different this year compared to last year
+# However, with a very low ks value of 0.07, this is not necessarily a meaningful difference.
+# this is something to be monitored, especially since in the yearly boxplots,
+# we visualized that this seems to be going up since 2020.
+# Further analysis could be done to assess the effect size.
 
 # Now compare the stats to see what the difference in ages is
 print("This past year")
@@ -205,6 +256,7 @@ fig.add_trace(go.Box(y=df1_, name="Past Year - Signup Age"))
 fig.update_layout(title="Age at Account Creation by relative year")
 fig.show()
 
+
 # %%
 # Also use the 1-way ANOVA test
 # This is not ideal since it does have a normal distribution assumption
@@ -215,12 +267,22 @@ fig.show()
 f_statistic, p_value = stats.f_oneway(df1_, df2_)
 print("F-statistic:", f_statistic)
 print("P-value:", p_value)
+
+#Cohen's d is one way to calculate the effect size between groups. [small=0.2, medium=0.5, large=0.8, very large= 1.3]
+#cohen's d formula = (m1-m2)/pooled std 
+#pooled std = sqrt((sd1^2 + sd2^2) ⁄ 2)
+eff = (df1_.mean()-df2_.mean())/np.sqrt((np.std(df1_)**2 + np.std(df2_)**2)/2)
+print('Cohens d effect size:', eff)
+
 # also stat sig
 # reject null that they have the same mean
 # so we are still saying stat sig mean getting older (40 this year vs 38 last year)
-# this is in line with the ks-test.
+# and again, effect size is very small, indicating not necessarily a meaningful difference.
+# This is in line with the ks-test.
+
 # %%
 ##2. Notes:
 # There is a statistically significant increase in user age when their account was created
 # when comparing users who entered the product within the last year vs uses who entered the product the year prior to that.
+# However, this has a very low effect size so new user age should be monitored.
 # Depending on the target market and desired user growth strategy, this trend is something which may require attention.

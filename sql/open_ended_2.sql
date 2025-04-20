@@ -1,6 +1,6 @@
 with de_duped_products as (
-    --de-duplciate barcodes (based on part 1 exploration, this is something which must be fixed)
-    --the the rows with the most data
+    --de-duplicate barcodes (based on part 1 exploration, this is something which must be fixed)
+    --keep the rows with the most data
     --and if that is tied, use the row with brand info
     select *
         , case when CATEGORY_1 is not null then 1 else 0 end
@@ -26,20 +26,18 @@ with de_duped_products as (
 )
 , transaction_details_by_brand as (
     --only for dip and salsa transactions, identify the brand
-    --basd on on assumptions, make final quanity "zero" map to 1
-    --based on assumptions, replace blanks with 0s for final sale
+    --based on assumptions, make final quantity "zero" map to 1
     select t.receipt_id
         , t.purchase_date
-        , replace(t.final_sale,' ','0')::decimal as final_sale
-        , replace(t.final_quantity,'zero','0')::decimal as final_quantity_
-        , replace(t.final_quantity,'zero','1')::decimal as final_quantity_imputed
+        , replace(t.final_sale,' ',NULL)::decimal as final_sale
+        , replace(t.final_quantity,'zero','1')::decimal as final_quantity_imputed --impute quantity with 1, not 0, based on stated assumption
         , t.final_sale as final_sale_raw
         , t.final_quantity as final_quantity_raw
         , ds.brand
     from transactions_df t
     join dips_and_salsa ds
         on t.barcode=ds.barcode
-        --we can join becase if we left join then we will not get any other useful information
+        --we can join because if we left join then we will not get any other useful information
         --we need the barcode to set up a proper connection, as nulls will give us no information about if a dip & salsa was purchased
 )
 , median_salsa_dip_sale as (
@@ -50,7 +48,7 @@ with de_duped_products as (
     where final_sale is not null
 )
 , imputed_details as (
-    --take transaction_details_by_brand and impute the median sales amount where no sales amount exists
+    --based on assumptions, replace blank final sale amount with median sales amount
     select *
         , (case when final_sale_raw=' ' 
             then (select med from median_salsa_dip_sale)::varchar 
@@ -61,7 +59,7 @@ with de_duped_products as (
 )
 --gather the final result
 --identify the top salsa and dip brand, based on total sales
---assuming median salsa and dip sales value when sales value is not prsent
+--assuming median salsa and dip sales value when sales value is not present
 select brand
     , sum(final_sale_imputed) as total_sales
     , sum(final_quantity_imputed) as total_quantity
@@ -73,4 +71,5 @@ limit 1
 --top result is not a null brand
 --if it was, we could add `where brand is not null`, 
 --or use these findings to inform the business that missing data is causing a major concern with findings
---I would favor seeing that a null is the most common response rather than filtering it out so that addtitional data discovery/work with software engineers could be performed
+--I would favor seeing that a null is the most common response rather than filtering it out 
+--so that additional data discovery/work with software engineers could be performed

@@ -69,7 +69,7 @@ for d in [products_df, transactions_df, users_df]:
         fig.show()
 
 # Quick callouts:
-# final quantity and final scale are right skewed
+# final quantity and final sale are right skewed
 # brand and manufacturer are frequently missing data
 # purchase and scan date are uniformly distributed over our time range
 # user data was created since 2018, so I will assume this is a random sample and representative of the population
@@ -78,7 +78,7 @@ for d in [products_df, transactions_df, users_df]:
 # %%
 ##FINAL_QUANTITY
 # Deeper exploration on the 0 items since this does not make sense.
-# I would imagine that at least 1 item must exist per reciept.
+# I would imagine that at least 1 item must exist per receipt.
 
 # Hypothesis: Quantity is a feature that was added at a later point in time
 # from my personal usage, this looks like a feature that was added but never backfilled
@@ -91,6 +91,28 @@ transactions_df[["SCAN_DATE", "PURCHASE_DATE", "FINAL_QUANTITY"]].sort_values(
 transactions_df[["SCAN_DATE", "PURCHASE_DATE", "FINAL_QUANTITY"]].sort_values(
     ["PURCHASE_DATE"]
 )
+
+# Plot for visuals
+fig = go.Figure()
+fig.add_trace(
+    go.Histogram(
+        histfunc="count",
+        y=transactions_df[transactions_df["FINAL_QUANTITY"] > 0]["PURCHASE_DATE"],
+        x=transactions_df[transactions_df["FINAL_QUANTITY"] > 0]["PURCHASE_DATE"],
+        name="Greater than Zero Quantity",
+    )
+)
+fig.add_trace(
+    go.Histogram(
+        histfunc="count",
+        y=transactions_df[transactions_df["FINAL_QUANTITY"] == 0]["PURCHASE_DATE"],
+        x=transactions_df[transactions_df["FINAL_QUANTITY"] == 0]["PURCHASE_DATE"],
+        name="Zero Quantity",
+    )
+)
+fig.update_layout(title="Quantity by Purchase Date")
+fig.show()
+
 # the hypothesis does not appear to hold true.
 # however, data is only from June-Sept 2024,
 # so I am going to have to assume this was due to an app version and the 0 quantity will fade out over time
@@ -99,7 +121,7 @@ transactions_df[["SCAN_DATE", "PURCHASE_DATE", "FINAL_QUANTITY"]].sort_values(
 ##FINAL_SALE
 # Deeper exploration since this seems to be a key feature that is missing from a lot of the data
 
-# Hypothesis: There is one missing final sale per reciept. This may be a placeholder for metadata.
+# Hypothesis: There is one missing final sale per receipt. This may be a placeholder for metadata.
 
 transactions_df[pd.isna(transactions_df["FINAL_SALE"]) == True]
 
@@ -114,11 +136,11 @@ fig.show()
 # quick plot for frequency by final quantity
 fig = go.Figure(data=[go.Histogram(x=missing_final_sale_df["FINAL_QUANTITY"])])
 fig.show()
-# most are 1s. but this mirrors the full dataset.
+# most are 1s, but this mirrors the full dataset.
 
 # now look to see if there is 1/reciept
 missing_final_sale_df["RECEIPT_ID"].value_counts()
-# there are occassionally more than 1 missing final sale amount per reciept.
+# there are occasionally more than 1 missing final sale amount per receipt.
 # Therefore, this does not appear to be a total line item amount
 
 # double check the quantity of missing final sale
@@ -133,6 +155,10 @@ transactions_df_["missing_final_sale"].agg(["count", "sum"])
 # the hypothesis does not appear to hold true.
 # we will have to deal with the missing data.
 # I will assume that this is randomly missing and we can impute the data
+
+# looking at my own app usage, it appears that the FINAL_SALE is the total for the line item
+# to impute the data, I would take an average item cost x item quantity
+# average item cost would ideally be imputed from the same category of products based on the barcode
 
 # %%
 # At this point, combine the data based on the ERD since basic exploration of the data on its own is complete
@@ -152,21 +178,22 @@ assert len(users_df) == users_df["ID"].nunique()
 # assertion error. Additional exploration required
 
 # A. Exploration
-# see discripancy quantity
+# see discrepancy quantity
 len(products_df)  # 845552
 products_df["BARCODE"].nunique()  # 841342
 
 products_df["BARCODE"].nunique() / len(products_df)  # 0.9950210040305032
-# almost no duplciates.
+# almost no duplicates.
 
-# determine if they are true duplciates or if there is different information in the products_df
+# determine if they are true duplicates or if there is different information in the products_df
 products_df[products_df.duplicated()]  # 215 true duplicates
 845552 - 841342  # 4210 duplicates
 # we cannot just drop duplicates and move on. We have to create de-dup logic.
 
 # There are multiple products without a barcode.
 # This is a data quality issue we will need to address and understand.
-# the blank barcodes are interesting, but I assume they are manually-entered and have yet to be incorporated to the auotmatic system which is why they do not have a barcode.
+# the blank barcodes are interesting, but I assume they are manually-entered
+# and have yet to be incorporated to the automatic system which is why they do not have a barcode.
 products_df[pd.isna(products_df["BARCODE"]) == True]  # 4025
 
 # Non-blank but also duplicate barcodes
@@ -183,19 +210,20 @@ dup_barcodes = (
 )
 
 
-# B. Resolve dups
-# to resolve dups, as there is no updated as of column, we cannot use a modified timestamp to pull in the most recent info
-# therefore, we will pull int the information based on how much data is filled out
+# B. Resolve dupes
+# Goal: Remove duplicate barcodes, and keep the barcode which has the most data fields filled out.
+# to resolve dupes, as there is no updated as of column, we cannot use a modified timestamp to pull in the most recent info
+# therefore, we will pull in the information based on how much data is filled out
 
-# 0. save non-dups
-# 1. drop dups
+# 0. save non-dupes
+# 1. drop dupes
 # 2. calc how many fields are filled out
-# 3. rn based on # of fields
+# 3. row number based on # of fields
 # otherwise, choose highest index
 # since we are assuming that the most recent records are at the bottom if we did not gain more product information
 
 # B.0
-# non-dups
+# non-dupes
 products_df_ = products_df[~(products_df["BARCODE"].isin(dup_barcodes))]
 
 # B.1
@@ -217,6 +245,7 @@ dup_products["manufacturer_notnull"] = (~pd.isna(dup_products["MANUFACTURER"])).
 dup_products["brand_notnull"] = (~pd.isna(dup_products["BRAND"])).astype(int)
 
 # count the number of non-nulls
+# I assume this will be better barcode data since there are less blank fields.
 dup_products["total_notnull"] = (
     dup_products["cat1_notnull"]
     + dup_products["cat2_notnull"]
@@ -230,7 +259,7 @@ dup_products["total_notnull"] = (
 dup_products["index_num"] = dup_products.index
 
 # B3. Create a flag for if we should keep the row, based on how much info is filled out/latest index
-dup_products["keep_flag"] = (
+dup_products["keep_rn"] = (
     dup_products.sort_values(
         ["BARCODE", "total_notnull", "index_num"], ascending=[True, False, False]
     )
@@ -239,8 +268,8 @@ dup_products["keep_flag"] = (
     + 1
 )
 
-# Only keep the rows where flag=1
-de_dup_products = dup_products[dup_products["keep_flag"] == 1]
+# Only keep the rows where keep_rn=1
+de_dup_products = dup_products[dup_products["keep_rn"] == 1]
 # 185. good. expected amount
 
 # Save the columns we want to add into our de-duped products
@@ -298,3 +327,5 @@ combined[
     & (pd.isna(combined["products_df_nonulls"]) == False)
 ]
 # 144 rows.
+
+# %%
