@@ -315,9 +315,9 @@ len(combined[pd.isna(combined["ID"]) == True]) / len(
 )  # 99.5% missing user data
 
 # count the number of missing products
-len(combined[
-    pd.isna(combined["products_df_nonulls"]) == True
-])  # 25170 missing product information ##24830 have product information
+len(
+    combined[pd.isna(combined["products_df_nonulls"]) == True]
+)  # 25170 missing product information ##24830 have product information
 len(combined[pd.isna(combined["products_df_nonulls"]) == True]) / len(
     combined
 )  # 50.3% missing product information
