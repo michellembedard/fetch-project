@@ -32,7 +32,7 @@ print(users_df.info())
 # fix transactions_df numeric formatting
 print(transactions_df["FINAL_QUANTITY"].value_counts())
 print(transactions_df["FINAL_SALE"].value_counts())
-# FINAL_QUANTITY "zero" should be "0", then convert to number
+# FINAL_QUANTITY "zero" should be "0", then convert to number for this initial exploration
 # FINAL_SALE should remove " ", then convert to number
 
 ## fix final_quantity
@@ -143,7 +143,7 @@ missing_final_sale_df["RECEIPT_ID"].value_counts()
 # there are occasionally more than 1 missing final sale amount per receipt.
 # Therefore, this does not appear to be a total line item amount
 
-# double check the quantity of missing final sale
+# double check the amount/percent missing final sale
 transactions_df_ = transactions_df.copy()
 transactions_df_["missing_final_sale"] = (
     pd.isna(transactions_df["FINAL_SALE"]) == True
@@ -159,6 +159,7 @@ transactions_df_["missing_final_sale"].agg(["count", "sum"])
 # looking at my own app usage, it appears that the FINAL_SALE is the total for the line item
 # to impute the data, I would take an average item cost x item quantity
 # average item cost would ideally be imputed from the same category of products based on the barcode
+# imputing not completed at this point in time, but would be incorporated into further analysis
 
 # %%
 # At this point, combine the data based on the ERD since basic exploration of the data on its own is complete
@@ -192,8 +193,8 @@ products_df[products_df.duplicated()]  # 215 true duplicates
 
 # There are multiple products without a barcode.
 # This is a data quality issue we will need to address and understand.
-# the blank barcodes are interesting, but I assume they are manually-entered
-# and have yet to be incorporated to the automatic system which is why they do not have a barcode.
+# the blank barcodes are interesting, but I assume that product information is manually-entered
+# and has yet to be incorporated to the automatic system which is why the products do not have a barcode.
 products_df[pd.isna(products_df["BARCODE"]) == True]  # 4025
 
 # Non-blank but also duplicate barcodes
@@ -216,9 +217,9 @@ dup_barcodes = (
 # therefore, we will pull in the information based on how much data is filled out
 
 # 0. save non-dupes
-# 1. drop dupes
-# 2. calc how many fields are filled out
-# 3. row number based on # of fields
+# 1. drop true dupes
+# 2. calculate how many fields are filled out
+# 3. create row number based on # of fields
 # otherwise, choose highest index
 # since we are assuming that the most recent records are at the bottom if we did not gain more product information
 
@@ -228,7 +229,7 @@ products_df_ = products_df[~(products_df["BARCODE"].isin(dup_barcodes))]
 
 # B.1
 dup_products = products_df[products_df["BARCODE"].isin(dup_barcodes)]
-dup_products.drop_duplicates(inplace=True)  # 212 rows
+dup_products.drop_duplicates(inplace=True)  # 212 rows remaining
 
 # B.2 calculate how much data is filled
 
@@ -289,7 +290,7 @@ assert (
 # also create a df without null barcodes in the products data since that can be useful
 products_df_nonulls = products_df_[pd.isna(products_df_["BARCODE"]) == False]
 
-# create a flag to indicate this exists. Will be used in join below
+# create a flag to indicate this exists. This will be used in initial exploration of the join below
 products_df_nonulls["products_df_nonulls"] = 1
 
 # %%
@@ -308,15 +309,15 @@ combined
 # count the number of missing user ids
 len(
     combined[pd.isna(combined["ID"]) == True]
-)  # 49738 missing user data #262 have user data
+)  # 49738 missing user data ##262 have user data
 len(combined[pd.isna(combined["ID"]) == True]) / len(
     combined
 )  # 99.5% missing user data
 
 # count the number of missing products
-combined[
-    pd.isna(combined["products_df_nonulls"]) == True
-]  # 25170 missing product information #24830 have product information
+len(
+    combined[pd.isna(combined["products_df_nonulls"]) == True]
+)  # 25170 missing product information ##24830 have product information
 len(combined[pd.isna(combined["products_df_nonulls"]) == True]) / len(
     combined
 )  # 50.3% missing product information

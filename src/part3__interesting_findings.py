@@ -27,6 +27,7 @@ users_df
 # %%
 # create plotting function to plot each value of a column on a time series together
 
+
 def timeseries_plotting(
     dataframe: pd.DataFrame = users_df, groupcol: str = "GENDER", grain: str = "Daily"
 ):
@@ -95,49 +96,61 @@ f.show()
 # This is interesting, but will now pursue age for additional findings.
 
 # An additional takeaway is that it appears that, across all genders, there was a large decline in new users.
-# This requires further exploration
+# This requires further exploration prior to moving on to age.
 
-#%%
+# %%
 # New users over time
 # Add column to quickly group everything together
-users_df['1s']='1'
+users_df["1s"] = "1"
 
-f = timeseries_plotting(groupcol='1s')
-f.update_layout(title='Daily New Users over time')
+f = timeseries_plotting(groupcol="1s")
+f.update_layout(title="Daily New Users over time")
 f.show()
 
-f = timeseries_plotting(groupcol='1s', grain="Weekly")
-f.update_layout(title='Weekly New Users over time')
+f = timeseries_plotting(groupcol="1s", grain="Weekly")
+f.update_layout(title="Weekly New Users over time")
 f.show()
 
-f = timeseries_plotting(groupcol='1s', grain="Monthly")
-f.update_layout(title='Monthly New Users over time')
+f = timeseries_plotting(groupcol="1s", grain="Monthly")
+f.update_layout(title="Monthly New Users over time")
 f.show()
-f.write_html('monthly_new_users_plt.html')
+f.write_html("monthly_new_users_plt.html")
 
 # New users started to decline in mid-2022 through mid-2023.
 # Starting mid-2023, new user growth has rebounded, but it has not returned to early-2022 levels.
 
 
-#%%
+# %%
 # Cumulative users over time
 
-# Gather all dates to account for possible missing dates
-# for ease, limit data to just the date and the count
-cumulative_users = pd.DataFrame(users_df[['CREATED_DATE','1s']])
-cumulative_users["CREATED_DATE_"] = pd.to_datetime(cumulative_users["CREATED_DATE"].dt.date)
+# Gather dates and user count
+cumulative_users = pd.DataFrame(users_df[["CREATED_DATE", "1s"]])
+cumulative_users["CREATED_DATE_"] = pd.to_datetime(
+    cumulative_users["CREATED_DATE"].dt.date
+)
 # Find counts per day
-cumulative_users_ = (cumulative_users.groupby("CREATED_DATE_").agg("count"))
+cumulative_users_ = cumulative_users.groupby("CREATED_DATE_").agg("count")
 # resample so there are no missing days of data
 df_resampled = cumulative_users_.resample("D").sum()
 
 # Calculate cumulative users
-df_resampled['Cumulative Users'] = df_resampled['1s'].cumsum()
+df_resampled["Cumulative Users"] = df_resampled["1s"].cumsum()
 
 # Create the plot
-fig = px.line(df_resampled, x=df_resampled.index, y='Cumulative Users', title='Cumulative Users Over Time')
+fig = px.line(
+    df_resampled,
+    x=df_resampled.index,
+    y="Cumulative Users",
+    title="Cumulative Users Over Time",
+)
 fig.show()
-fig.write_html('cumulative_users_plt.html')
+fig.write_html("cumulative_users_plt.html")
+
+# There has been an increase in user base
+# it is evident that growth slowed when new user quantity started to decline in mid-2022.
+# Additionally, in this plot, we can see a slight increase in growth recently.
+
+# Now we will move on to looking at user age when creating their account.
 
 # %%
 # To prep for age discovery, add field for age at account creation
@@ -172,7 +185,7 @@ for d in ["CREATED_DATE", "CREATED_DATE_Month", "CREATED_DATE_Year"]:
 
 ##2. Notes:
 # Population age looks fairly consistent over time
-# There was a decrease around 2020, but it has looked flat for the last couple of calendar years
+# There was a decrease around 2020, but it has slightly increased for the last couple of calendar years
 # Next steps - determine if there is a statistically significant difference in the age distributions for this year compared to last year
 # Similar to the SQL section, I am assuming that the data is a sample
 # so I will use the latest created_date as the most recent information and work backwards from there
@@ -211,6 +224,7 @@ fig.update_layout(title="Age at Account Creation by relative year")
 fig.show()
 
 # These are not normally distributed, even though they do have a bit of a bell curve.
+# As expected from SQL discovery, there are less new users this year than there were last year.
 
 # %%
 # Use ks-test since it does not assume normal distribution and our data is not normally distributed
@@ -219,18 +233,24 @@ fig.show()
 
 # remove nulls from age, as we saw above most people had age
 # so we can remove these samples with decent confidence that it will not affect our overall findings
-df1_ = df1[pd.isna(df1["Age_at_Creation"]) == False]["Age_at_Creation"] #created_within_the_last_year
-df2_ = df2[pd.isna(df2["Age_at_Creation"]) == False]["Age_at_Creation"] #created_within_the_year_prior_to_last_yr
+df1_ = df1[pd.isna(df1["Age_at_Creation"]) == False][
+    "Age_at_Creation"
+]  # created_within_the_last_year
+df2_ = df2[pd.isna(df2["Age_at_Creation"]) == False][
+    "Age_at_Creation"
+]  # created_within_the_year_prior_to_last_yr
 
 # Calculate the stats
 ks_statistic, p_value = stats.ks_2samp(df1_, df2_)
 print("K-S statistic:", ks_statistic)
 print("P-value:", p_value)
+# K-S statistic: 0.07143173942449366
+# P-value: 1.0400392429112111e-33
 
 # stat sig. So we reject that the distributions are the same
 # meaning our population of users is different this year compared to last year
 # However, with a very low ks value of 0.07, this is not necessarily a meaningful difference.
-# this is something to be monitored, especially since in the yearly boxplots,
+# change in user age is something to be monitored, especially since in the yearly boxplots,
 # we visualized that this seems to be going up since 2020.
 # Further analysis could be done to assess the effect size.
 
@@ -267,12 +287,15 @@ fig.show()
 f_statistic, p_value = stats.f_oneway(df1_, df2_)
 print("F-statistic:", f_statistic)
 print("P-value:", p_value)
+# K-S statistic: 0.07143173942449366
+# P-value: 1.0400392429112111e-33
 
-#Cohen's d is one way to calculate the effect size between groups. [small=0.2, medium=0.5, large=0.8, very large= 1.3]
-#cohen's d formula = (m1-m2)/pooled std 
-#pooled std = sqrt((sd1^2 + sd2^2) ⁄ 2)
-eff = (df1_.mean()-df2_.mean())/np.sqrt((np.std(df1_)**2 + np.std(df2_)**2)/2)
-print('Cohens d effect size:', eff)
+# Cohen's d is one way to calculate the effect size between groups. [small=0.2, medium=0.5, large=0.8, very large= 1.3]
+# cohen's d formula = (m1-m2)/pooled std
+# pooled std = sqrt((sd1^2 + sd2^2) ⁄ 2)
+eff = (df1_.mean() - df2_.mean()) / np.sqrt((np.std(df1_) ** 2 + np.std(df2_) ** 2) / 2)
+print("Cohens d effect size:", eff)
+# Cohens d effect size: 0.1448206389228743
 
 # also stat sig
 # reject null that they have the same mean
@@ -284,5 +307,8 @@ print('Cohens d effect size:', eff)
 ##2. Notes:
 # There is a statistically significant increase in user age when their account was created
 # when comparing users who entered the product within the last year vs uses who entered the product the year prior to that.
-# However, this has a very low effect size so new user age should be monitored.
+# However, this has a very low effect size so it is not necessarily a meaningful difference.
+# The new user age should be monitored.
 # Depending on the target market and desired user growth strategy, this trend is something which may require attention.
+
+# %%

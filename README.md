@@ -18,7 +18,7 @@ Click the triangle to un-collapse sections.
 
 1. Are there any data quality issues present?
     - Within transactions, there is missing `FINAL_SALE` and `FINAL_QUANTITY` data.
-        - These both appear to be business-critical data points, so it is concerning that these are missing. I would like to connect with other data team or software engineering members to gather historical context and learn if there are any assumptions we can make around the missing data.
+        - These both appear to be business-critical data points, so it is concerning that these are missing. I would like to connect with other data team or software engineering team members to gather historical context and learn if there are any assumptions we can make around the missing data.
     - There are transactions without barcodes.
         - This is not concerning since I imagine that there are niche stores that would be selling products without a traditional barcode.
             - However, if there is an automatic process to create a barcode in the data if one does not exist, then this is cause for concern and something I would want to reach out to developers to understand further.
@@ -37,7 +37,7 @@ Click the triangle to un-collapse sections.
             - Since 1 is the most common quantity amount, I will assume that any "zero" values can reasonably be assumed to have a true quantity of 1.
                 - After the initial data exploration, I followed this assumption in the SQL files in Part 2.
 
-- More information can be found in `src/part1__data_exploration.py`
+- More information can be found in [src/part1__data_exploration.py](src/part1__data_exploration.py)
 </details>
 
 <br>
@@ -64,13 +64,39 @@ Click the triangle to un-collapse sections.
     - C1. What are the top 5 brands by receipts scanned among users 21 and over?
     - O2. Which is the leading brand in the Dips & Salsa category?
     - O3. At what percent has Fetch grown year over year?
-- Please see assumptions in `src/part2__run_sql.py` file
+- Assumptions are listed in expandable sections below as well as in [src/part2__run_sql.py](src/part2__run_sql.py) file
     - There are also variations on C1 and O3 based on differing assumptions I might make, specifically if there was more data.
-- Queries are reproduced in the expandable sections below
+- Queries are reproduced in the expandable sections below.
 
 
 <details>
 <summary>C1. What are the top 5 brands by receipts scanned among users 21 and over?</Summary>
+
+<details>
+<summary>C1. Assumptions</Summary>
+
+1. Assumption 1: 
+    - I only have a sample of data.
+    - The code is set up to run properly if more data is present.
+
+2. Assumption 2: 
+    - We want the top 5 results.
+    - However, if there is a tie for 5th place, include all brands which are tied for the 5th place spot, as there is is not an inherent order to brands.
+
+3. Assumption 3: 
+    - We care about unique receipts scanned, not specific times the brand was on the same receipt.
+    - This allows for us to not account for the missing quantity data, which we cannot resolve without understanding business assumptions.
+    - Additionally, we believe it is more important for the item to be purchased multiple times in distinct trips to the store, rather than multiples within the same check-out.
+
+4. Assumption 4: 
+    - Products without barcodes have been manually entered and are not validated with the system. Therefore, they should not be considered in the analysis.
+
+5. Assumption 5: 
+    - Duplicate barcodes in the product data must be resolved.
+    - There should only be one set of product details per barcode.
+    - The assumption is the product details with the most data is the most accurate, and if there is a tie, then the product details with brand is most accurate.
+
+</details>
 
 ```
 with users_21_up as (
@@ -166,6 +192,39 @@ limit 5
 <details>
 <summary>O2. Which is the leading brand in the Dips & Salsa category?</Summary>
 
+<details>
+<summary>O2. Assumptions</Summary>
+
+1. Assumption 1:
+    - The leading brand is the brand with the highest final sales.
+    - As there are limited transactions, we can look at all the data, rather than go through an analysis of trending historical data.
+
+2. Assumption 2: 
+    - There are no other salsa or dip categories that are not also included in the CATEGORY_2='Dips & Salsa'.
+    - This was verified through data exploration for the sample of data I was provided.
+
+3. Assumption 3: 
+    - If Final Quantity = 'zero', we assume the quantity = 1.
+    - We believe this since we assume the 'zero' data was due to a new feature rollout where data was not backfilled.
+
+4. Assumption 4: 
+    - Final Sales is the total amount for the line item (ie it does not need to be multiplied by a quantity).
+
+5. Assumption 5: 
+    - Missing Final Sales data can be imputed with the median of the Dips & Salsa product type from items in transactions.
+    - This accounts for the median based on actual purchases, rather than the median from the product list without considering shopping patterns.
+    - Since quantity is almost always 1, and the imputing assumption is not fully trustworthy without more business context, I will not multiply the imputed final sale amount by quantity in order to limit risks of imputing.
+
+6. Assumption 6: 
+    - Products without barcodes have been manually entered and are not validated with the system. Therefore, they should not be considered in the analysis.
+
+7. Assumption 7: 
+    - Duplicate barcodes in the product data must be resolved.
+    - There should only be one set of product details per barcode.
+    - The assumption is the product details with the most data is the most accurate, and if there is a tie, then the product details with brand is most accurate.
+
+</details>
+
 ```
 with de_duped_products as (
     --de-duplicate barcodes (based on part 1 exploration, this is something which must be fixed)
@@ -248,6 +307,25 @@ limit 1
 <details>
 <summary>O3. At what percent has Fetch grown year over year?</Summary>
 
+<details>
+<summary>O3. Assumptions</Summary>
+
+1. Assumption 1:
+    - User growth is the measure of Fetch growth.
+
+2. Assumption 2: 
+    - The user data provided is a representative sample, even if it is not the full dataset.
+    - The data was pulled in the past so is not current through today, but rather current though the last user created date.
+
+3. Assumption 3: 
+    - The standard YOY growth formula is used by Fetch:  (Users This Period-Users Last Period)/Users Last Period
+    - This is calculating the full population growth rate, not the new user growth rate.
+
+4. Assumption 4
+    - We would like to view YOY growth for the last 5 years.
+
+</details>
+
 ```
 --identify yoy growth for the last 5 years
 with yoy_start as (
@@ -274,13 +352,12 @@ with yoy_start as (
         , case when created_date::timestamp between fouryearsago and threeyearsago then 1 else 0 end as new_3_4_year_ago
         , case when created_date::timestamp between fiveyearsago and fouryearsago then 1 else 0 end as new_4_5_year_ago
         , case when created_date::timestamp < fiveyearsago then 1 else 0 end as existing_users_prior_to_5_years_ago
-        from users_df
+    from users_df
     join yoy_start
         on 1=1
 )
 , summary_stats as (
     --identify summary stats for the YOY growth
-    --see `yoy_growth_pct` for the final answer
     select sum(new_0_1_year_ago) as total_new_users_0_1_year_ago --unnecessary for calculation, just interesting
         , sum(new_1_2_year_ago) as total_new_1_2_year_ago
         , sum(new_2_3_year_ago) as total_new_2_3_year_ago
@@ -373,10 +450,10 @@ Through my analysis, I uncovered a handful of data quality callouts and have a f
 - Outstanding questions:
     - Can you direct me to the teams who can provide access to the full dataset?
         - Based on my findings, I believe I am missing users and missing products in my current dataset. 
-        - I also assume I am missing transactions due to the low quantity of data. This does not allow for a full picture of user engagement and would be important to understand who is a power user and how best to target users.
+        - I also assume I am missing transactions due to the low quantity of data. This does not allow for a full picture of user engagement and would be necessary data to have in order to understand who is a power user and how best to target users.
     - Are there standard assumptions which should be made to fill in the gaps?
         - Specifically, where there is no "final sales" information, and no "final quantity" information (ie "zero"), do we have standard assumptions? These appear to be highly important data points and I do not want to make assumptions that differ from the rest of the team.
-        - I believe this data is missing either due to (1) bad receipt scans, or (2) product enhancements where data was not captured until a specific point in time, but cannot yet validate these assumptions.
+        - I believe this data is missing either due to (1) bad receipt scans, or (2) product enhancements which resulted in newly captured data starting a specific point in time. However I cannot yet validate these assumptions.
 
 </br>  
 </br>     
@@ -406,3 +483,4 @@ Michelle Bedard
 
 Notes:
 - Please see package versions in pyproject.toml file for reproducing results.
+- Code for the additional analysis conducted for Part 3 can be found in [src/part3__interesting_findings.py](src/part3__interesting_findings.py)
