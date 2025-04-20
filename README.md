@@ -211,7 +211,7 @@ limit 5
     - Final Sales is the total amount for the line item (ie it does not need to be multiplied by a quantity).
 
 5. Assumption 5: 
-    - Missing Final Sales data can be imputed with the median of the Dips & Salsa product type from items in transactions.
+    - Missing Final Sales data can be imputed with the median of the Dips & Salsa product type. The median is gathered from the items in transactions which have Dips & Salsa product details.
     - This accounts for the median based on actual purchases, rather than the median from the product list without considering shopping patterns.
     - Since quantity is almost always 1, and the imputing assumption is not fully trustworthy without more business context, I will not multiply the imputed final sale amount by quantity in order to limit risks of imputing.
 
@@ -315,7 +315,7 @@ limit 1
 
 2. Assumption 2: 
     - The user data provided is a representative sample, even if it is not the full dataset.
-    - The data was pulled in the past so is not current through today, but rather current though the last user created date.
+    - The data was pulled in the past, so is not current through today, but rather current though the last user created date.
 
 3. Assumption 3: 
     - The standard YOY growth formula is used by Fetch:  (Users This Period-Users Last Period)/Users Last Period
